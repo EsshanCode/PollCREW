@@ -1,0 +1,47 @@
+name: Verify PollCREW
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EMBEDDING_MODE: offline
+      EXTRACTION_MODE: offline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - run: uv sync --frozen
+        working-directory: backend
+      - run: uv run pytest -q
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build && npm run typecheck
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: uv run uvicorn main:app --host 127.0.0.1 --port 8000 > /tmp/pollcrew-api.log 2>&1 &
+        working-directory: backend
+      - run: npm test
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-verification
+          path: frontend/test-results
+          retention-days: 3
