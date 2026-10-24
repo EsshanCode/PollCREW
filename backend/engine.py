@@ -76,7 +76,7 @@ def assignment(w, loc, req):
 
 
 def solve(data, locked=None, baseline=False):
-    started = time.perf_counter()
+    preparation_started = time.perf_counter()
     locked = locked or []
     workers, locations = data["workers"], data["locations"]
     groups = [(loc, req) for loc in locations for req in loc["requirements"]]
@@ -86,6 +86,8 @@ def solve(data, locked=None, baseline=False):
         for k, (loc, req) in enumerate(groups)
         if eligible(w, loc, req)
     }
+    preparation_ms = round((time.perf_counter() - preparation_started) * 1000, 2)
+    started = time.perf_counter()
     lock_edges = []
     for a in locked:
         found = [
@@ -178,6 +180,7 @@ def solve(data, locked=None, baseline=False):
         "match_quality": round(float(np.mean([a["score"] for a in assignments])), 1)
         if assignments
         else 0,
+        "preparation_ms": preparation_ms,
         "runtime_ms": round((time.perf_counter() - started) * 1000, 2),
         "gaps": gaps,
         "status": status,
