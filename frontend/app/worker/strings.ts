@@ -94,6 +94,7 @@ export const ROLE_TEXT: Record<
 
 const EN = {
   lang: "Español",
+  organizer: "Organizer view",
   bigger: "Larger text",
   smaller: "Smaller text",
   back: "Back",
@@ -184,6 +185,7 @@ const EN = {
 
 const ES: typeof EN = {
   lang: "English",
+  organizer: "Vista del coordinador",
   bigger: "Letra más grande",
   smaller: "Letra más pequeña",
   back: "Atrás",

@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   Clock3,
   Languages,
+  LayoutDashboard,
   MapPin,
   Navigation,
   Printer,
@@ -335,6 +336,10 @@ export default function WorkerPage() {
           </span>
         </a>
         <div className="wk-tools">
+          <a className="wk-chip" href="/">
+            <LayoutDashboard size={18} aria-hidden />
+            {t.organizer}
+          </a>
           <button
             className="wk-chip"
             onClick={() => setLarge(!large)}
