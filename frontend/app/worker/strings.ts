@@ -174,6 +174,8 @@ const EN = {
   noSession:
     "Open this page from the coordinator workspace so it uses the same demo.",
   edit: "Edit my answers",
+  done: "Done",
+  monthShort: "NOV",
   aiNote:
     "Suggestions come from your own words. Nothing is chosen until you tap it.",
 };
@@ -263,6 +265,8 @@ const ES: typeof EN = {
   noSession:
     "Abra esta página desde el espacio del coordinador para usar la misma demostración.",
   edit: "Editar mis respuestas",
+  done: "Listo",
+  monthShort: "NOV",
   aiNote:
     "Las sugerencias vienen de sus propias palabras. Nada se elige hasta que usted lo toque.",
 };

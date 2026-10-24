@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Accessibility,
   ArrowLeft,
+  ArrowRight,
   CalendarDays,
   Check,
   CircleAlert,
@@ -295,6 +296,14 @@ export default function WorkerPage() {
     }
   }
 
+  function done() {
+    setWid("");
+    setDraft(null);
+    setSearch("");
+    setError("");
+    setStep("who");
+  }
+
   const questionIndex = QUESTION_STEPS.indexOf(step);
   const previous: Partial<Record<Step, Step>> = {
     about: "who",
@@ -336,6 +345,7 @@ export default function WorkerPage() {
           </button>
         </div>
       </header>
+      <div className="wk-glow" aria-hidden />
       <main className="wk-main">
         {previous[step] && (
           <button
@@ -350,9 +360,25 @@ export default function WorkerPage() {
           </button>
         )}
         {questionIndex >= 0 && (
-          <p className="wk-step">
-            {t.step(questionIndex + 1, QUESTION_STEPS.length)}
-          </p>
+          <div className="wk-progress">
+            <p className="wk-step">
+              {t.step(questionIndex + 1, QUESTION_STEPS.length)}
+            </p>
+            <ol aria-hidden>
+              {QUESTION_STEPS.map((s, i) => (
+                <li
+                  key={s}
+                  className={
+                    i < questionIndex
+                      ? "done"
+                      : i === questionIndex
+                        ? "now"
+                        : ""
+                  }
+                />
+              ))}
+            </ol>
+          </div>
         )}
         {error && (
           <div className="wk-error" role="alert">
@@ -395,8 +421,15 @@ export default function WorkerPage() {
               {matches.map((w) => (
                 <li key={w.id}>
                   <button className="wk-name" onClick={() => open(w)}>
-                    <span>{w.name}</span>
+                    <span className="wk-avatar" aria-hidden>
+                      {w.name
+                        .split(" ")
+                        .map((part) => part[0])
+                        .join("")}
+                    </span>
+                    <span className="wk-name-text">{w.name}</span>
                     <small>{w.id}</small>
+                    <ArrowRight size={20} aria-hidden />
                   </button>
                 </li>
               ))}
@@ -423,6 +456,7 @@ export default function WorkerPage() {
             />
             <button className="wk-primary" disabled={busy} onClick={findSkills}>
               {t.findSkills}
+              <ArrowRight size={22} aria-hidden />
             </button>
             <button className="wk-link" onClick={() => setStep("skills")}>
               {t.skip}
@@ -478,6 +512,7 @@ export default function WorkerPage() {
             )}
             <button className="wk-primary" onClick={() => setStep("day")}>
               {t.next}
+              <ArrowRight size={22} aria-hidden />
             </button>
           </section>
         )}
@@ -572,7 +607,11 @@ export default function WorkerPage() {
             title={t.savedTitle}
             body={t.savedBody}
             tone="good"
-          />
+          >
+            <button className="wk-primary" onClick={done}>
+              {t.done}
+            </button>
+          </Message>
         )}
         {step === "locked" && (
           <Message
@@ -580,7 +619,11 @@ export default function WorkerPage() {
             title={t.lockedTitle}
             body={t.lockedBody}
             tone="warn"
-          />
+          >
+            <button className="wk-primary" onClick={done}>
+              {t.done}
+            </button>
+          </Message>
         )}
 
         {step === "home" && worker && (
@@ -590,12 +633,16 @@ export default function WorkerPage() {
               <>
                 <h1>{t.dayTitleAssigned}</h1>
                 <div className="wk-assignment">
-                  <div className="wk-fact">
-                    <CalendarDays size={28} aria-hidden />
+                  <div className="wk-ticket">
+                    <div className="wk-date" aria-hidden>
+                      <span>{t.monthShort}</span>
+                      <strong>3</strong>
+                    </div>
                     <div>
                       <strong>{t.date}</strong>
                       <span>{t.arrive(clock(location.start - 0.5))}</span>
                     </div>
+                    <CalendarDays size={26} aria-hidden />
                   </div>
                   <div className="wk-fact">
                     <MapPin size={28} aria-hidden />
@@ -691,7 +738,11 @@ export default function WorkerPage() {
             title={t.cancelledTitle}
             body={t.cancelledBody}
             tone="good"
-          />
+          >
+            <button className="wk-primary" onClick={done}>
+              {t.done}
+            </button>
+          </Message>
         )}
       </main>
       <footer className="wk-foot">{t.appName}</footer>
@@ -730,6 +781,7 @@ function Choice<T>({
               <strong>{o.label}</strong>
               {o.body && <span>{o.body}</span>}
             </span>
+            <ArrowRight className="wk-option-arrow" size={22} aria-hidden />
           </button>
         ))}
       </div>
