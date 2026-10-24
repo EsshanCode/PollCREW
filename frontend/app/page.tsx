@@ -81,7 +81,7 @@ export default function Home() {
   );
   useEffect(() => {
     let active = true;
-    async function init() {
+    async function init(attempt = 0): Promise<void> {
       try {
         const stored = sessionStorage.getItem("pollcrew-session");
         let response = stored
@@ -92,6 +92,7 @@ export default function Home() {
           if (active) {
             setSid(stored!);
             setData(json);
+            setError("");
           }
         } else {
           response = await fetch("/api/sessions", { method: "POST" });
@@ -101,13 +102,17 @@ export default function Home() {
             sessionStorage.setItem("pollcrew-session", json.session_id);
             setSid(json.session_id);
             setData(json);
+            setError("");
           }
         }
       } catch {
-        if (active)
+        if (!active) return;
+        if (attempt === 2)
           setError(
-            "Can’t reach the PollCREW server. Start the backend on port 8000, then reload.",
+            "Can’t reach the PollCREW server yet. Start the backend on port 8000. This page will connect by itself.",
           );
+        await new Promise((r) => setTimeout(r, 2000));
+        return init(attempt + 1);
       }
     }
     init();
@@ -234,7 +239,7 @@ export default function Home() {
           </div>
           {!data ? (
             <div className="panel loading">
-              {error ? "Waiting for the server." : "Loading…"}
+              {error ? "Waiting for the server…" : "Loading…"}
             </div>
           ) : !current ? (
             <>
