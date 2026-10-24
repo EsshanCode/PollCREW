@@ -60,6 +60,7 @@ export type Plan = {
   coverage: number;
   needed: number;
   match_quality: number;
+  preparation_ms: number;
   runtime_ms: number;
   status: string;
   approved: boolean;
