@@ -1,0 +1,385 @@
+{
+  "seed": 2026,
+  "runs": 5000,
+  "matching_mode": "sentence-transformers",
+  "rows": [
+    {
+      "jurisdiction": "wake-nc",
+      "cancelled_ids": [
+        "NC-011",
+        "NC-026",
+        "NC-032"
+      ],
+      "optimized": {
+        "coverage": 1.0,
+        "match_quality": 79.7,
+        "runtime_ms": 14.44,
+        "preparation_ms": 80.87,
+        "simulation": {
+          "runs": 5000,
+          "seed": 2026,
+          "metric": "No-show scenarios with modeled expected wait over 30 minutes at any location",
+          "risk_percent": 74.1,
+          "locations": [
+            {
+              "id": "wake-nc-L0",
+              "name": "Central Library",
+              "check_in_workers": 4,
+              "risk_percent": 28.3,
+              "unstable_percent": 28.3,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.49
+            },
+            {
+              "id": "wake-nc-L1",
+              "name": "North Community Center",
+              "check_in_workers": 4,
+              "risk_percent": 29.44,
+              "unstable_percent": 29.44,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.9
+            },
+            {
+              "id": "wake-nc-L2",
+              "name": "East Learning Center",
+              "check_in_workers": 4,
+              "risk_percent": 29.42,
+              "unstable_percent": 29.42,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 2.47
+            },
+            {
+              "id": "wake-nc-L3",
+              "name": "West Recreation Hall",
+              "check_in_workers": 4,
+              "risk_percent": 28.44,
+              "unstable_percent": 28.44,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 3.31
+            }
+          ]
+        },
+        "status": "OPTIMAL"
+      },
+      "baseline": {
+        "coverage": 1.0,
+        "match_quality": 79.6,
+        "runtime_ms": 0.24,
+        "preparation_ms": 0.96,
+        "simulation": {
+          "runs": 5000,
+          "seed": 2026,
+          "metric": "No-show scenarios with modeled expected wait over 30 minutes at any location",
+          "risk_percent": 74.48,
+          "locations": [
+            {
+              "id": "wake-nc-L0",
+              "name": "Central Library",
+              "check_in_workers": 4,
+              "risk_percent": 28.66,
+              "unstable_percent": 28.66,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.49
+            },
+            {
+              "id": "wake-nc-L1",
+              "name": "North Community Center",
+              "check_in_workers": 4,
+              "risk_percent": 28.76,
+              "unstable_percent": 28.76,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.9
+            },
+            {
+              "id": "wake-nc-L2",
+              "name": "East Learning Center",
+              "check_in_workers": 4,
+              "risk_percent": 29.42,
+              "unstable_percent": 29.42,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 2.47
+            },
+            {
+              "id": "wake-nc-L3",
+              "name": "West Recreation Hall",
+              "check_in_workers": 4,
+              "risk_percent": 28.36,
+              "unstable_percent": 28.36,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 3.31
+            }
+          ]
+        },
+        "status": "GREEDY"
+      },
+      "recovery": {
+        "optimized": {
+          "affected": 3,
+          "replacements": 3,
+          "runtime_ms": 6.38,
+          "coverage": 1.0,
+          "risk_percent": 74.18
+        },
+        "baseline": {
+          "affected": 3,
+          "replacements": 3,
+          "runtime_ms": 2.1,
+          "coverage": 1.0,
+          "risk_percent": 75.06
+        }
+      }
+    },
+    {
+      "jurisdiction": "dane-wi",
+      "cancelled_ids": [
+        "WI-006",
+        "WI-024",
+        "WI-044"
+      ],
+      "optimized": {
+        "coverage": 1.0,
+        "match_quality": 78.0,
+        "runtime_ms": 10.49,
+        "preparation_ms": 0.98,
+        "simulation": {
+          "runs": 5000,
+          "seed": 2026,
+          "metric": "No-show scenarios with modeled expected wait over 30 minutes at any location",
+          "risk_percent": 52.84,
+          "locations": [
+            {
+              "id": "dane-wi-L0",
+              "name": "Central Library",
+              "check_in_workers": 4,
+              "risk_percent": 3.66,
+              "unstable_percent": 3.66,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 0.82
+            },
+            {
+              "id": "dane-wi-L1",
+              "name": "North Community Center",
+              "check_in_workers": 4,
+              "risk_percent": 3.82,
+              "unstable_percent": 3.82,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.02
+            },
+            {
+              "id": "dane-wi-L2",
+              "name": "East Learning Center",
+              "check_in_workers": 4,
+              "risk_percent": 28.94,
+              "unstable_percent": 28.94,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.27
+            },
+            {
+              "id": "dane-wi-L3",
+              "name": "West Recreation Hall",
+              "check_in_workers": 4,
+              "risk_percent": 28.22,
+              "unstable_percent": 28.22,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.61
+            }
+          ]
+        },
+        "status": "OPTIMAL"
+      },
+      "baseline": {
+        "coverage": 1.0,
+        "match_quality": 78.0,
+        "runtime_ms": 0.36,
+        "preparation_ms": 0.97,
+        "simulation": {
+          "runs": 5000,
+          "seed": 2026,
+          "metric": "No-show scenarios with modeled expected wait over 30 minutes at any location",
+          "risk_percent": 52.78,
+          "locations": [
+            {
+              "id": "dane-wi-L0",
+              "name": "Central Library",
+              "check_in_workers": 4,
+              "risk_percent": 3.62,
+              "unstable_percent": 3.62,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 0.82
+            },
+            {
+              "id": "dane-wi-L1",
+              "name": "North Community Center",
+              "check_in_workers": 4,
+              "risk_percent": 3.82,
+              "unstable_percent": 3.82,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.02
+            },
+            {
+              "id": "dane-wi-L2",
+              "name": "East Learning Center",
+              "check_in_workers": 4,
+              "risk_percent": 28.88,
+              "unstable_percent": 28.88,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.27
+            },
+            {
+              "id": "dane-wi-L3",
+              "name": "West Recreation Hall",
+              "check_in_workers": 4,
+              "risk_percent": 28.22,
+              "unstable_percent": 28.22,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.61
+            }
+          ]
+        },
+        "status": "GREEDY"
+      },
+      "recovery": {
+        "optimized": {
+          "affected": 3,
+          "replacements": 3,
+          "runtime_ms": 6.34,
+          "coverage": 1.0,
+          "risk_percent": 52.74
+        },
+        "baseline": {
+          "affected": 3,
+          "replacements": 3,
+          "runtime_ms": 1.74,
+          "coverage": 1.0,
+          "risk_percent": 53.18
+        }
+      }
+    },
+    {
+      "jurisdiction": "maricopa-az",
+      "cancelled_ids": [
+        "AZ-002",
+        "AZ-011",
+        "AZ-012"
+      ],
+      "optimized": {
+        "coverage": 1.0,
+        "match_quality": 77.9,
+        "runtime_ms": 10.51,
+        "preparation_ms": 15.41,
+        "simulation": {
+          "runs": 5000,
+          "seed": 2026,
+          "metric": "No-show scenarios with modeled expected wait over 30 minutes at any location",
+          "risk_percent": 44.8,
+          "locations": [
+            {
+              "id": "maricopa-az-L0",
+              "name": "Central Library",
+              "check_in_workers": 5,
+              "risk_percent": 6.3,
+              "unstable_percent": 6.3,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 0.71
+            },
+            {
+              "id": "maricopa-az-L1",
+              "name": "North Community Center",
+              "check_in_workers": 5,
+              "risk_percent": 5.18,
+              "unstable_percent": 5.18,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 0.87
+            },
+            {
+              "id": "maricopa-az-L2",
+              "name": "East Learning Center",
+              "check_in_workers": 5,
+              "risk_percent": 5.24,
+              "unstable_percent": 5.24,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.05
+            },
+            {
+              "id": "maricopa-az-L3",
+              "name": "West Recreation Hall",
+              "check_in_workers": 5,
+              "risk_percent": 34.44,
+              "unstable_percent": 5.3,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.29
+            }
+          ]
+        },
+        "status": "OPTIMAL"
+      },
+      "baseline": {
+        "coverage": 1.0,
+        "match_quality": 77.1,
+        "runtime_ms": 0.23,
+        "preparation_ms": 0.9,
+        "simulation": {
+          "runs": 5000,
+          "seed": 2026,
+          "metric": "No-show scenarios with modeled expected wait over 30 minutes at any location",
+          "risk_percent": 44.18,
+          "locations": [
+            {
+              "id": "maricopa-az-L0",
+              "name": "Central Library",
+              "check_in_workers": 5,
+              "risk_percent": 5.98,
+              "unstable_percent": 5.98,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 0.71
+            },
+            {
+              "id": "maricopa-az-L1",
+              "name": "North Community Center",
+              "check_in_workers": 5,
+              "risk_percent": 5.42,
+              "unstable_percent": 5.42,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 0.87
+            },
+            {
+              "id": "maricopa-az-L2",
+              "name": "East Learning Center",
+              "check_in_workers": 5,
+              "risk_percent": 5.52,
+              "unstable_percent": 5.52,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.05
+            },
+            {
+              "id": "maricopa-az-L3",
+              "name": "West Recreation Hall",
+              "check_in_workers": 5,
+              "risk_percent": 33.44,
+              "unstable_percent": 5.34,
+              "zero_staff_percent": 0.0,
+              "all_attend_expected_wait_minutes": 1.29
+            }
+          ]
+        },
+        "status": "GREEDY"
+      },
+      "recovery": {
+        "optimized": {
+          "affected": 3,
+          "replacements": 3,
+          "runtime_ms": 5.87,
+          "coverage": 1.0,
+          "risk_percent": 44.08
+        },
+        "baseline": {
+          "affected": 3,
+          "replacements": 3,
+          "runtime_ms": 2.13,
+          "coverage": 1.0,
+          "risk_percent": 43.16
+        }
+      }
+    }
+  ]
+}
