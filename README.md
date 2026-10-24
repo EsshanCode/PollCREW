@@ -1,5 +1,7 @@
 # PollCREW
 
+Hack/OHIO 2026
+
 ## AI assistance disclosure
 
 This repository is being developed with AI assistance. AI-generated implementation will be disclosed as it is added.
