@@ -45,6 +45,7 @@ def benchmark():
                         "coverage",
                         "match_quality",
                         "runtime_ms",
+                        "preparation_ms",
                         "simulation",
                         "status",
                     ]
@@ -55,6 +56,7 @@ def benchmark():
                         "coverage",
                         "match_quality",
                         "runtime_ms",
+                        "preparation_ms",
                         "simulation",
                         "status",
                     ]
