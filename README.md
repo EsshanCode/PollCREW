@@ -91,7 +91,7 @@ cd backend
 uv run python benchmark.py > benchmark.json
 ```
 
-Runtime covers candidate scoring and assignment generation, not queue simulation. First-use model loading and cache state affect timings. Results are observations of this synthetic dataset, not general performance claims.
+Assignment-selection runtime excludes eligibility and score preparation, model loading, and queue simulation. Eligibility and score preparation time is reported separately; first-use model loading and cache state affect that preparation metric. Both algorithms therefore compare selection on prepared candidate sets. Results are observations of this synthetic dataset, not general performance claims.
 
 ## Verification
 
