@@ -926,7 +926,14 @@ export default function Home() {
                                   <td>{current.baseline.match_quality}/100</td>
                                 </tr>
                                 <tr>
-                                  <td>Assignment runtime</td>
+                                  <td>Eligibility & score preparation</td>
+                                  <td>
+                                    {(current.before ?? plan).preparation_ms} ms
+                                  </td>
+                                  <td>{current.baseline.preparation_ms} ms</td>
+                                </tr>
+                                <tr>
+                                  <td>Assignment selection runtime</td>
                                   <td>
                                     {(current.before ?? plan).runtime_ms} ms
                                   </td>
@@ -995,9 +1002,11 @@ export default function Home() {
                             Recovery applies the same cancelled worker IDs to
                             both initial plans and locks each plan’s unaffected
                             assignments. Different initial assignments can mean
-                            different affected counts. Runtime includes
-                            candidate scoring, excludes queue simulation, and
-                            varies by machine.
+                            different affected counts. Selection runtime
+                            excludes eligibility, score preparation, model
+                            loading, and queue simulation. Preparation is
+                            reported separately and depends on the model cache.
+                            Timings vary by machine.
                           </p>
                         </>
                       ) : (
