@@ -101,14 +101,14 @@ const EN = {
   step: (n: number, total: number) => `Step ${n} of ${total}`,
   appName: "PollCREW for poll workers",
   demoNote:
-    "Demo: pick a sample worker. In a real launch, each worker signs in from a link sent by text message.",
+    "Demo: tap any sample worker. Real workers get a sign-in link by text.",
   whoTitle: "Who are you?",
   county: "Your county",
   searchName: "Search your name",
   start: "Start",
   aboutTitle: "Tell us about your experience",
   aboutHelp:
-    "Write a few sentences about work or volunteering you have done. Any kind of experience counts.",
+    "A few sentences about any job or volunteering. Everything counts.",
   aboutExample:
     "Example: “I worked the front desk at a clinic. I helped older patients. I speak Spanish.”",
   aboutLabel: "Your experience",
@@ -144,7 +144,7 @@ const EN = {
   saving: "Saving…",
   savedTitle: "Thank you. Your answers are saved.",
   savedBody:
-    "Your coordinator will build the plan. You will get your polling place and role here.",
+    "Your polling place and job will show up here once the plan is ready.",
   lockedTitle: "Your coordinator has already made the plan",
   lockedBody:
     "To change your answers now, please call your county elections office.",
@@ -191,14 +191,13 @@ const ES: typeof EN = {
   step: (n, total) => `Paso ${n} de ${total}`,
   appName: "PollCREW para trabajadores electorales",
   demoNote:
-    "Demostración: elija un trabajador de ejemplo. En la versión real, cada persona entra con un enlace enviado por mensaje de texto.",
+    "Demostración: toque cualquier trabajador. En la versión real, cada persona recibe un enlace por mensaje de texto.",
   whoTitle: "¿Quién es usted?",
   county: "Su condado",
   searchName: "Busque su nombre",
   start: "Empezar",
   aboutTitle: "Cuéntenos sobre su experiencia",
-  aboutHelp:
-    "Escriba unas frases sobre trabajos o voluntariado que haya hecho. Toda experiencia cuenta.",
+  aboutHelp: "Unas frases sobre cualquier trabajo o voluntariado. Todo cuenta.",
   aboutExample:
     "Ejemplo: “Trabajé en la recepción de una clínica. Ayudé a pacientes mayores. Hablo español.”",
   aboutLabel: "Su experiencia",
@@ -236,7 +235,7 @@ const ES: typeof EN = {
   saving: "Guardando…",
   savedTitle: "Gracias. Sus respuestas están guardadas.",
   savedBody:
-    "Su coordinador preparará el plan. Aquí verá su lugar de votación y su puesto.",
+    "Aquí verá su lugar de votación y su puesto cuando el plan esté listo.",
   lockedTitle: "Su coordinador ya preparó el plan",
   lockedBody:
     "Para cambiar sus respuestas ahora, llame a la oficina de elecciones de su condado.",

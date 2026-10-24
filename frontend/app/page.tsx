@@ -5,13 +5,13 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  CheckCircle2,
-  ChevronRight,
+  ClipboardList,
   Globe2,
   LayoutDashboard,
   MapPin,
   RotateCcw,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Users,
   Zap,
@@ -20,18 +20,28 @@ import { AppState } from "@/components/types";
 import WorkerEditor from "@/components/WorkerEditor";
 import LocationEditor from "@/components/LocationEditor";
 import ImportPanel from "@/components/ImportPanel";
+import { LogoMark, Mascot } from "@/components/Brand";
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => <div className="map loading">Loading map…</div>,
 });
 const RiskChart = dynamic(() => import("@/components/RiskChart"), {
   ssr: false,
-  loading: () => <p>Loading risk chart…</p>,
+  loading: () => <p>Loading chart…</p>,
 });
 const TradeoffChart = dynamic(() => import("@/components/TradeoffChart"), {
   ssr: false,
-  loading: () => <p>Loading trade-off chart…</p>,
+  loading: () => <p>Loading chart…</p>,
 });
+
+const TABS = [
+  { id: "Overview", icon: LayoutDashboard },
+  { id: "Workers", icon: Users },
+  { id: "Plan", icon: ClipboardList },
+  { id: "Sites", icon: MapPin },
+  { id: "Results", icon: BarChart3 },
+];
+
 export default function Home() {
   const [data, setData] = useState<AppState | null>(null);
   const [sid, setSid] = useState("");
@@ -63,7 +73,7 @@ export default function Home() {
         throw new Error(
           typeof json.detail === "string"
             ? json.detail
-            : "Check your inputs: minimums must not exceed desired staffing, and shift end must follow start.",
+            : "Check your numbers: a minimum can’t be higher than the desired count, and a shift has to end after it starts.",
         );
       return json;
     },
@@ -96,7 +106,7 @@ export default function Home() {
       } catch {
         if (active)
           setError(
-            "Cannot reach the demo server. Start the FastAPI backend on port 8000, then reload.",
+            "Can’t reach the PollCREW server. Start the backend on port 8000, then reload.",
           );
       }
     }
@@ -105,14 +115,19 @@ export default function Home() {
       active = false;
     };
   }, []);
-  async function action(name: string, path: string, body?: unknown) {
-    setBusy(name);
+  async function action(
+    working: string,
+    path: string,
+    done: string,
+    body?: unknown,
+  ) {
+    setBusy(working);
     setError("");
     setNotice("");
     try {
       setData(await request(path, "POST", body));
       if (path === "/reset") setFormEpoch((n) => n + 1);
-      setNotice(`${name} complete.`);
+      setNotice(done);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -123,117 +138,78 @@ export default function Home() {
     (d) => d.jurisdiction.id === selected,
   );
   const plan = current?.plan;
+  const impact = current?.impact;
   const workers = current?.workers ?? [];
   const worker = workers.find((w) => w.id === workerId) ?? workers[1];
   const totalWorkers =
     data?.jurisdictions.reduce((n, j) => n + j.workers.length, 0) ?? 0;
   const totalLocations =
     data?.jurisdictions.reduce((n, j) => n + j.locations.length, 0) ?? 0;
-  const tabs = [
-    "Overview",
-    "Workers",
-    "Assignments",
-    "Requirements",
-    "Evaluation",
+  const workerHref = `/worker${sid ? `?s=${sid}` : ""}${selected ? `${sid ? "&" : "?"}j=${selected}` : ""}`;
+  const recovered = impact?.recovered != null;
+  const steps = [
+    { label: "Review workers", done: !!plan },
+    { label: "Build the plan", done: !!plan },
+    { label: "Approve", done: !!plan?.approved || !!impact },
+    {
+      label: "Handle Election Day",
+      done: recovered && !!plan?.approved,
+    },
   ];
+  const currentStep = steps.findIndex((s) => !s.done);
+  const cancelledCount = impact?.cancelled_ids.length ?? 0;
+
   return (
     <div className="shell">
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="PollCREW home">
-          <span className="brand-mark">
-            <Check size={25} strokeWidth={3} />
+          <LogoMark size={42} />
+          <span>
+            Poll<span>CREW</span>
           </span>
-          Poll<span>CREW</span>
         </a>
-        <p className="brand-sub">PEOPLE MAKE ELECTIONS WORK</p>
-        <div className="workspace-label">COORDINATOR WORKSPACE</div>
-        <button
-          className={!selected ? "nav active" : "nav"}
-          onClick={() => select("")}
-        >
-          <Globe2 size={19} />
-          National overview
-        </button>
-        <a
-          className="nav"
-          href={`/worker${sid ? `?s=${sid}` : ""}${selected ? `${sid ? "&" : "?"}j=${selected}` : ""}`}
-        >
-          <Users size={19} />
-          Poll worker view
-        </a>
-        <div className="workspace-label">JURISDICTIONS</div>
-        {data?.jurisdictions.map((j) => (
+        <nav className="side-nav" aria-label="Main">
           <button
-            key={j.jurisdiction.id}
-            className={selected === j.jurisdiction.id ? "nav active" : "nav"}
-            onClick={() => select(j.jurisdiction.id)}
+            className={!selected ? "nav active" : "nav"}
+            onClick={() => select("")}
           >
-            <span className="state-code">{j.jurisdiction.code}</span>
-            <span>
-              {j.jurisdiction.name}
-              <small>{j.jurisdiction.state}</small>
-            </span>
+            <Globe2 size={19} />
+            Home
           </button>
-        ))}
+          <a className="nav" href={workerHref}>
+            <Smartphone size={19} />
+            Poll worker view
+          </a>
+          <div className="side-label">Counties</div>
+          {data?.jurisdictions.map((j) => (
+            <button
+              key={j.jurisdiction.id}
+              className={
+                selected === j.jurisdiction.id
+                  ? "nav county-nav active"
+                  : "nav county-nav"
+              }
+              onClick={() => select(j.jurisdiction.id)}
+            >
+              <span className="state-code">{j.jurisdiction.code}</span>
+              <span>
+                {j.jurisdiction.name}
+                <small>{j.jurisdiction.state}</small>
+              </span>
+            </button>
+          ))}
+        </nav>
         <div className="sidebar-bottom">
-          <ShieldCheck size={23} />
-          <strong>Nonpartisan by design</strong>
-          <p>Operational staffing, centered on people.</p>
-          <div className="demo-tag">SYNTHETIC DEMO</div>
-          <p>No live election data.</p>
+          <ShieldCheck size={20} />
+          <span>
+            <strong>Nonpartisan</strong>
+            <small>Demo data only</small>
+          </span>
         </div>
       </aside>
       <main>
-        <header className="topbar">
-          <div className="breadcrumb">
-            Workspace <ChevronRight size={14} />{" "}
-            {current?.jurisdiction.name ?? "United States"}
-          </div>
-          <div className="top-actions">
-            <span className="pill demo-pill">
-              <span className="dot" />
-              Hackathon sandbox
-            </span>
-            <button
-              className="text-button"
-              disabled={!!busy || !data}
-              onClick={() => {
-                setWorkerId("");
-                action("Reset demo", "/reset");
-              }}
-            >
-              <RotateCcw size={15} />
-              Reset demo
-            </button>
-            <span className="avatar">CO</span>
-          </div>
-        </header>
+        <div className="bunting" aria-hidden />
         <div className="content">
-          <div className="heading-row">
-            <div>
-              <div className="eyebrow">
-                {current
-                  ? `${current.jurisdiction.state.toUpperCase()} · ${current.jurisdiction.real_locations ? "REAL POLLING PLACES · SYNTHETIC STAFF" : "SYNTHETIC JURISDICTION"}`
-                  : "COORDINATED ROUTING OF ELECTION WORKERS"}
-              </div>
-              <h1>
-                {current
-                  ? current.jurisdiction.name
-                  : "Every location. The right crew."}
-              </h1>
-              <p className="subtitle">
-                {current
-                  ? "Turn confirmed skills into a staffing plan you can explain."
-                  : "A national perspective. A local plan. Bring people and polling places together."}
-              </p>
-            </div>
-            {current && (
-              <button className="secondary" onClick={() => select("")}>
-                <Globe2 size={16} />
-                US overview
-              </button>
-            )}
-          </div>
           {error && (
             <div className="error" role="alert">
               {error}
@@ -249,1007 +225,886 @@ export default function Home() {
                 {busy}…
               </div>
             )}
-            {notice && !busy && <div className="success">{notice}</div>}
+            {notice && !busy && (
+              <div className="success">
+                <Check size={18} strokeWidth={3} />
+                {notice}
+              </div>
+            )}
           </div>
           {!data ? (
             <div className="panel loading">
-              {error
-                ? "The demo needs its local backend."
-                : "Preparing your reproducible demo…"}
+              {error ? "Waiting for the server." : "Loading…"}
             </div>
-          ) : (
+          ) : !current ? (
             <>
-              {!current ? (
-                <>
-                  <div className="stats">
-                    <Stat
-                      icon={<Globe2 />}
-                      value={`${data.jurisdictions.length}`}
-                      label="Jurisdictions"
-                      detail={
-                        data.jurisdictions.some(
-                          (j) => j.jurisdiction.real_locations,
-                        )
-                          ? "Including real polling places"
-                          : "Synthetic demo sites"
+              <section className="hero">
+                <div className="hero-text">
+                  <h1>Every precinct crewed. Every line short.</h1>
+                  <p className="subtitle">
+                    Staff every polling place, then keep it staffed when
+                    Election Day changes.
+                  </p>
+                  <div className="button-row">
+                    <button
+                      className="big"
+                      onClick={() =>
+                        select(data.jurisdictions[0].jurisdiction.id)
                       }
-                    />
-                    <Stat
-                      icon={<Users />}
-                      value={`${totalWorkers}`}
-                      label="Synthetic workers"
-                      detail="Confirmed skills, individual availability"
-                    />
-                    <Stat
-                      icon={<MapPin />}
-                      value={`${totalLocations}`}
-                      label="Voting locations"
-                      detail={(() => {
-                        const real = data.jurisdictions
-                          .filter((j) => j.jurisdiction.real_locations)
-                          .reduce((n, j) => n + j.locations.length, 0);
-                        return real
-                          ? `${real} real polling places · rest synthetic`
-                          : "Synthetic demo sites";
-                      })()}
-                    />
-                    <Stat
-                      icon={<BarChart3 />}
-                      value="5,000"
-                      label="No-show scenarios"
-                      detail="Seeded, repeatable risk analysis"
-                    />
+                    >
+                      Start the demo <ArrowRight size={18} />
+                    </button>
+                    <button
+                      className="secondary big"
+                      disabled={!!busy}
+                      onClick={() =>
+                        action("Resetting", "/reset", "Demo reset.")
+                      }
+                    >
+                      <RotateCcw size={16} />
+                      Reset demo
+                    </button>
                   </div>
-                  <div className="national-grid">
-                    <section className="panel map-panel">
-                      <div className="section-heading">
-                        <div>
-                          <h2>Local readiness, national view</h2>
-                          <p>Select a demo jurisdiction to get started.</p>
-                        </div>
-                        <span className="pill">United States</span>
-                      </div>
-                      <Map
-                        data={data.jurisdictions}
-                        selected=""
-                        onSelect={select}
-                      />
-                      <div className="map-legend">
-                        <span>
-                          <i className="legend-dot" />
-                          Demo jurisdiction
-                        </span>
-                        <span>
-                          Only marked jurisdictions have synthetic data.
-                        </span>
-                      </div>
-                    </section>
-                    <section className="panel intro-panel">
-                      <span className="eyebrow">
-                        FROM EXPERIENCE TO READINESS
-                      </span>
-                      <h2>A better plan starts with your people.</h2>
-                      <p>
-                        Confirm what workers can do. Build the crew. Recover
-                        when plans change.
-                      </p>
-                      <ol className="steps">
-                        <li>
-                          <span>01</span>
-                          <div>
-                            <strong>Confirm skills</strong>
-                            <p>Review suggestions with supporting text.</p>
-                          </div>
-                        </li>
-                        <li>
-                          <span>02</span>
-                          <div>
-                            <strong>Build an explainable plan</strong>
-                            <p>Match operational needs and availability.</p>
-                          </div>
-                        </li>
-                        <li>
-                          <span>03</span>
-                          <div>
-                            <strong>Adapt with confidence</strong>
-                            <p>Replace cancellations. Keep the rest intact.</p>
-                          </div>
-                        </li>
-                      </ol>
-                      <button
-                        onClick={() =>
-                          select(data.jurisdictions[0].jurisdiction.id)
-                        }
-                      >
-                        Open demo jurisdiction <ArrowRight size={17} />
-                      </button>
-                    </section>
-                  </div>
-                  <ImportPanel
-                    configured={data.polling_api_configured}
-                    request={request}
-                    onImported={(next, id) => {
-                      setData(next);
-                      select(id);
-                    }}
+                </div>
+                <Mascot size={210} wave />
+              </section>
+              <div className="stats">
+                <Stat value={`${data.jurisdictions.length}`} label="Counties" />
+                <Stat value={`${totalWorkers}`} label="Poll workers" />
+                <Stat value={`${totalLocations}`} label="Polling places" />
+              </div>
+              <section className="panel">
+                <div className="section-heading">
+                  <h2>Pick a county</h2>
+                  <label className="state-filter">
+                    <span className="sr-only">State</span>
+                    <select
+                      aria-label="Filter jurisdictions by state"
+                      value={filter}
+                      onChange={(e) => setFilter(e.target.value)}
+                    >
+                      <option value="">All states</option>
+                      {data.jurisdictions.map((j) => (
+                        <option
+                          key={j.jurisdiction.id}
+                          value={j.jurisdiction.code}
+                        >
+                          {j.jurisdiction.state}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="pick-grid">
+                  <Map
+                    data={data.jurisdictions}
+                    selected=""
+                    onSelect={select}
                   />
-                  <div className="section-heading jurisdiction-heading">
-                    <div>
-                      <h2>Choose your jurisdiction</h2>
-                      <p>One staffing engine. Different local needs.</p>
-                    </div>
-                    <label className="state-filter">
-                      State
-                      <select
-                        aria-label="Filter jurisdictions by state"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                      >
-                        <option value="">All demo states</option>
-                        {data.jurisdictions.map((j) => (
-                          <option
-                            key={j.jurisdiction.code}
-                            value={j.jurisdiction.code}
-                          >
-                            {j.jurisdiction.state}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
                   <div className="jurisdiction-cards">
                     {data.jurisdictions
                       .filter((j) => !filter || j.jurisdiction.code === filter)
-                      .map((j, i) => (
+                      .map((j) => (
                         <button
                           className="jurisdiction-card"
                           key={j.jurisdiction.id}
                           onClick={() => select(j.jurisdiction.id)}
                         >
-                          <div className={`state-art art-${i}`}>
-                            <span>{j.jurisdiction.code}</span>
-                            <MapPin size={28} />
-                          </div>
-                          <div className="card-body">
-                            <span className="eyebrow">
+                          <span className="state-badge">
+                            {j.jurisdiction.code}
+                          </span>
+                          <span className="card-body">
+                            <span className="card-state">
                               {j.jurisdiction.state}
                             </span>
-                            <h3>
-                              {j.jurisdiction.name}
-                              <ArrowRight size={18} />
-                            </h3>
-                            <p>
-                              {j.workers.length} workers <span>·</span>{" "}
-                              {j.locations.length}{" "}
+                            <h3>{j.jurisdiction.name}</h3>
+                            <span className="small">
+                              {j.workers.length} workers, {j.locations.length}{" "}
                               {j.jurisdiction.real_locations
                                 ? "real polling places"
-                                : "voting locations"}
-                            </p>
-                            <span className="small">
-                              {j.plan
-                                ? `${Math.round(j.plan.coverage * 100)}% staffed · ${j.plan.approved ? "Approved" : "Review pending"}`
-                                : "Ready to build a staffing plan"}
+                                : "sites"}
                             </span>
-                          </div>
+                          </span>
+                          {j.plan ? (
+                            <span className="chip done">
+                              {j.plan.approved ? "Approved" : "Planned"}
+                            </span>
+                          ) : (
+                            <ArrowRight size={20} />
+                          )}
                         </button>
                       ))}
                   </div>
-                </>
-              ) : (
-                <>
-                  <nav className="tabs" aria-label="Jurisdiction sections">
-                    {tabs.map((t) => (
-                      <button
-                        className={tab === t ? "selected" : ""}
-                        key={t}
-                        onClick={() => setTab(t)}
-                      >
-                        {t === "Overview" && <LayoutDashboard size={16} />}
-                        {t === "Workers" && <Users size={16} />}
-                        {t === "Assignments" && <CheckCircle2 size={16} />}
-                        {t === "Evaluation" && <BarChart3 size={16} />}
-                        {t}
-                      </button>
-                    ))}
-                  </nav>
-                  <div className="workflow">
-                    <div className={plan ? "done" : "current"}>
-                      <span>1</span> Confirm skills
-                    </div>
-                    <ChevronRight size={15} />
-                    <div
+                </div>
+              </section>
+              <ImportPanel
+                configured={data.polling_api_configured}
+                request={request}
+                onImported={(next, id) => {
+                  setData(next);
+                  select(id);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <div className="heading-row">
+                <div>
+                  <h1>{current.jurisdiction.name}</h1>
+                  <p className="subtitle">
+                    {current.jurisdiction.state}
+                    <span
                       className={
-                        plan?.approved || current.impact ? "done" : "current"
+                        current.jurisdiction.real_locations
+                          ? "chip live"
+                          : "chip"
                       }
                     >
-                      <span>2</span> Generate & approve
-                    </div>
-                    <ChevronRight size={15} />
-                    <div
-                      className={
-                        current.impact?.recovered != null ? "done" : ""
-                      }
-                    >
-                      <span>3</span> Recover cancellations
-                    </div>
-                    <ChevronRight size={15} />
-                    <div
-                      className={
-                        current.impact?.recovered != null && plan?.approved
-                          ? "done"
-                          : ""
-                      }
-                    >
-                      <span>4</span> Approve revision
-                    </div>
-                  </div>
-                  <div className="stats">
-                    <Stat
-                      icon={<Users />}
-                      value={`${workers.filter((w) => !w.cancelled).length}`}
-                      label="Available pool"
-                      detail={`${workers.filter((w) => w.cancelled).length} cancelled · eligibility checked per role`}
-                    />
-                    <Stat
-                      icon={<CheckCircle2 />}
-                      value={plan ? `${Math.round(plan.coverage * 100)}%` : "—"}
-                      label="Staffing coverage"
-                      detail={
-                        plan
-                          ? `${Math.round(plan.coverage * plan.needed)} of ${plan.needed} desired positions · +${plan.surge_assigned} surge check-in`
-                          : "Generate a plan to measure"
-                      }
-                    />
-                    <Stat
-                      icon={<BarChart3 />}
-                      value={plan ? `${plan.simulation.risk_percent}%` : "—"}
-                      label="Modeled queue risk"
-                      detail={
-                        plan
-                          ? `Chance any site waits >30 min · exact check ${plan.simulation.analytic_risk_percent}%`
-                          : "Chance any site waits >30 min"
-                      }
-                    />
-                    <Stat
-                      icon={<ShieldCheck />}
-                      value={
-                        plan?.approved
-                          ? "Approved"
-                          : plan?.disrupted
-                            ? "Disrupted"
-                            : plan
-                              ? "Review"
-                              : "Draft"
-                      }
-                      label="Plan status"
-                      detail={`Revision ${current.revision} · coordinator controlled`}
-                    />
-                  </div>
-                  <div className="action-strip">
-                    <div>
-                      <strong>
-                        {plan?.disrupted
-                          ? "Three workers cancelled. Your next move is ready."
-                          : !plan
-                            ? "Ready to build your crew?"
-                            : plan.approved
-                              ? "Plan approved inside the demo."
-                              : "Review assignments before approving."}
-                      </strong>
-                      <p>
-                        {plan?.disrupted
-                          ? `${current.impact?.preserved} unaffected assignments stay locked during recovery.`
-                          : !plan
-                            ? "Review worker profiles and requirements, then let the solver build a plan."
-                            : "Every match is checked against your configured operational requirements."}
-                      </p>
-                    </div>
-                    <div className="button-row">
-                      {!plan && (
-                        <button
-                          disabled={!!busy}
-                          onClick={() =>
-                            action(
-                              "Generate assignments",
-                              `/jurisdictions/${selected}/generate`,
-                            )
-                          }
-                        >
-                          <Sparkles size={16} />
-                          Generate assignments
-                        </button>
-                      )}
-                      {plan && !plan.approved && !plan.disrupted && (
-                        <button
-                          disabled={!!busy}
-                          onClick={() =>
-                            action(
-                              "Approve plan",
-                              `/jurisdictions/${selected}/approve`,
-                              { revision: current.revision },
-                            )
-                          }
-                        >
-                          <Check size={17} />
-                          {current.impact
-                            ? "Approve revised plan"
-                            : "Approve plan"}
-                        </button>
-                      )}
-                      {plan?.approved && !current.impact && (
-                        <button
-                          className="warning-button"
-                          disabled={!!busy}
-                          onClick={() =>
-                            action(
-                              "Cancel three workers",
-                              `/jurisdictions/${selected}/cancel`,
-                            )
-                          }
-                        >
-                          <Zap size={16} />
-                          Simulate 3 cancellations
-                        </button>
-                      )}
-                      {plan?.disrupted && (
-                        <button
-                          disabled={!!busy}
-                          onClick={() =>
-                            action(
-                              "Recover with backups",
-                              `/jurisdictions/${selected}/recover`,
-                            )
-                          }
-                        >
-                          Recover with backups <ArrowRight size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {current.impact && (
-                    <section className="impact">
-                      <strong>Cancellation recovery</strong>
-                      <span>
-                        {current.impact.cancelled_ids.length} cancelled:{" "}
-                        {current.impact.cancelled_ids.join(", ")}
-                      </span>
-                      <span>
-                        {current.impact.preserved} assignments preserved
-                      </span>
-                      <span>
-                        {current.impact.recovered == null
-                          ? "Backups not yet assigned"
-                          : `${current.impact.recovered} replacements assigned`}
-                      </span>
-                      <span>
-                        Risk: {current.impact.before_risk}% →{" "}
-                        {current.impact.after_risk}% after cancellations
-                        {current.impact.recovered != null
-                          ? ` → ${plan?.simulation.risk_percent}% after recovery`
-                          : ""}
-                      </span>
-                    </section>
-                  )}
-                  {tab === "Overview" && (
+                      {current.jurisdiction.real_locations
+                        ? "Real polling places"
+                        : "Demo data"}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  className="secondary"
+                  disabled={!!busy}
+                  onClick={() => {
+                    setWorkerId("");
+                    action("Resetting", "/reset", "Demo reset.");
+                  }}
+                >
+                  <RotateCcw size={16} />
+                  Reset demo
+                </button>
+              </div>
+              <ol className="stepper" aria-label="Progress">
+                {steps.map((s, i) => (
+                  <li
+                    key={s.label}
+                    className={
+                      s.done ? "done" : i === currentStep ? "current" : ""
+                    }
+                    aria-current={i === currentStep ? "step" : undefined}
+                  >
+                    <span className="step-dot">
+                      {s.done ? <Check size={16} strokeWidth={3.5} /> : i + 1}
+                    </span>
+                    {s.label}
+                  </li>
+                ))}
+              </ol>
+              <section className="next-step">
+                <div>
+                  <h2>
+                    {!plan
+                      ? "Build the staffing plan"
+                      : plan.disrupted
+                        ? `${cancelledCount} worker${cancelledCount === 1 ? " can’t" : "s can’t"} make it`
+                        : !plan.approved
+                          ? recovered
+                            ? "Backups found"
+                            : "Check the plan, then approve it"
+                          : recovered
+                            ? "Every site is covered again"
+                            : "Plan approved"}
+                  </h2>
+                  <p>
+                    {!plan
+                      ? "PollCREW matches workers to sites in seconds. You can review worker skills first."
+                      : plan.disrupted
+                        ? `${impact?.preserved} other assignments stay exactly where they are.`
+                        : !plan.approved
+                          ? recovered
+                            ? `${impact?.recovered} replacements are ready. Approve to send the changes.`
+                            : `${plan.assignments.length} workers placed and ${Math.round(plan.coverage * 100)}% of spots filled.`
+                          : recovered
+                            ? `Line risk is back to ${plan.simulation.risk_percent}%.`
+                            : "Now try an Election Day surprise."}
+                  </p>
+                </div>
+                <div className="button-row">
+                  {!plan && (
                     <>
-                      <div className="national-grid">
-                        <section className="panel map-panel">
-                          <div className="section-heading">
-                            <div>
-                              <h2>Voting locations</h2>
-                              <p>
-                                {current.jurisdiction.real_locations
-                                  ? "Real polling places from official election data."
-                                  : "Physical sites, with their associated precincts."}
-                              </p>
-                            </div>
-                            <span className="pill">
-                              {current.locations.length} locations
-                            </span>
-                          </div>
-                          <Map
-                            data={data.jurisdictions}
-                            selected={selected}
-                            onSelect={select}
-                          />
-                          <div className="map-legend">
-                            <span>
-                              <i className="legend-dot" />
-                              Desired coverage met
-                            </span>
-                            <span>
-                              <i className="legend-dot amber" />
-                              Unfilled positions
-                            </span>
-                            <span>
-                              <i className="legend-dot gray" />
-                              Not planned
-                            </span>
-                          </div>
-                          <p className="map-note">
-                            {current.jurisdiction.real_locations
-                              ? `Polling places from ${current.jurisdiction.source} · synthetic workers · straight-line travel estimate`
-                              : "Synthetic coordinates · external basemap · straight-line travel estimate"}
+                      <button
+                        className="big"
+                        disabled={!!busy}
+                        onClick={() =>
+                          action(
+                            "Building the plan",
+                            `/jurisdictions/${selected}/generate`,
+                            "Plan ready.",
+                          )
+                        }
+                      >
+                        <Sparkles size={18} />
+                        Build the plan
+                      </button>
+                      <button
+                        className="secondary big"
+                        onClick={() => setTab("Workers")}
+                      >
+                        Review workers
+                      </button>
+                    </>
+                  )}
+                  {plan && !plan.approved && !plan.disrupted && (
+                    <>
+                      <button
+                        className="big"
+                        disabled={!!busy}
+                        onClick={() =>
+                          action(
+                            "Approving",
+                            `/jurisdictions/${selected}/approve`,
+                            "Approved.",
+                            { revision: current.revision },
+                          )
+                        }
+                      >
+                        <Check size={18} strokeWidth={3} />
+                        {impact ? "Approve revised plan" : "Approve plan"}
+                      </button>
+                      {tab !== "Plan" && (
+                        <button
+                          className="secondary big"
+                          onClick={() => setTab("Plan")}
+                        >
+                          See who goes where
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {plan?.approved && !impact && (
+                    <button
+                      className="gold big"
+                      disabled={!!busy}
+                      onClick={() =>
+                        action(
+                          "Cancelling 3 workers",
+                          `/jurisdictions/${selected}/cancel`,
+                          "3 workers cancelled.",
+                        )
+                      }
+                    >
+                      <Zap size={18} />
+                      Simulate 3 cancellations
+                    </button>
+                  )}
+                  {plan?.disrupted && (
+                    <button
+                      className="big"
+                      disabled={!!busy}
+                      onClick={() =>
+                        action(
+                          "Finding backups",
+                          `/jurisdictions/${selected}/recover`,
+                          "Backups assigned.",
+                        )
+                      }
+                    >
+                      Recover with backups <ArrowRight size={18} />
+                    </button>
+                  )}
+                  {plan?.approved && recovered && tab !== "Results" && (
+                    <button
+                      className="secondary big"
+                      onClick={() => setTab("Results")}
+                    >
+                      See results
+                    </button>
+                  )}
+                </div>
+              </section>
+              <div className="stats four">
+                <Stat
+                  value={`${workers.filter((w) => !w.cancelled).length}`}
+                  label="Workers ready"
+                  detail={
+                    workers.some((w) => w.cancelled)
+                      ? `${workers.filter((w) => w.cancelled).length} cancelled`
+                      : undefined
+                  }
+                />
+                <Stat
+                  value={plan ? `${Math.round(plan.coverage * 100)}%` : "–"}
+                  label="Spots filled"
+                  detail={
+                    plan
+                      ? `${Math.round(plan.coverage * plan.needed)} of ${plan.needed}`
+                      : undefined
+                  }
+                />
+                <Stat
+                  value={plan ? `${plan.simulation.risk_percent}%` : "–"}
+                  label="Long-line risk"
+                  detail="Chance any site waits 30+ min"
+                  tone={
+                    plan && plan.simulation.risk_percent > 30
+                      ? "bad"
+                      : undefined
+                  }
+                />
+                <Stat
+                  value={
+                    plan?.approved
+                      ? "Approved"
+                      : plan?.disrupted
+                        ? "Needs backups"
+                        : plan
+                          ? "Draft"
+                          : "Not built"
+                  }
+                  label="Plan"
+                  detail={`Version ${current.revision}`}
+                />
+              </div>
+              {impact && (
+                <section className="impact">
+                  <h2>Election Day changes</h2>
+                  <ul>
+                    <li>
+                      <strong>{impact.cancelled_ids.length}</strong> cancelled
+                      <small>{impact.cancelled_ids.join(", ")}</small>
+                    </li>
+                    <li>
+                      <strong>{impact.preserved}</strong> kept in place
+                    </li>
+                    <li>
+                      <strong>{recovered ? impact.recovered : "–"}</strong>{" "}
+                      {recovered ? "replaced" : "waiting for backups"}
+                    </li>
+                    <li>
+                      <strong>
+                        {impact.before_risk}% → {impact.after_risk}%
+                        {recovered
+                          ? ` → ${plan?.simulation.risk_percent}%`
+                          : ""}
+                      </strong>{" "}
+                      long-line risk
+                    </li>
+                  </ul>
+                </section>
+              )}
+              <nav className="tabs" aria-label="County sections">
+                {TABS.map(({ id, icon: Icon }) => (
+                  <button
+                    className={tab === id ? "selected" : ""}
+                    key={id}
+                    onClick={() => setTab(id)}
+                    aria-pressed={tab === id}
+                  >
+                    <Icon size={17} />
+                    {id}
+                  </button>
+                ))}
+              </nav>
+              {tab === "Overview" && (
+                <>
+                  <div className="overview-grid">
+                    <section className="panel map-panel">
+                      <div className="section-heading">
+                        <h2>Polling places</h2>
+                        <span className="map-legend">
+                          <span>
+                            <i className="legend-dot" />
+                            Fully staffed
+                          </span>
+                          <span>
+                            <i className="legend-dot short" />
+                            Short
+                          </span>
+                          <span>
+                            <i className="legend-dot gray" />
+                            No plan yet
+                          </span>
+                        </span>
+                      </div>
+                      <Map
+                        data={data.jurisdictions}
+                        selected={selected}
+                        onSelect={select}
+                      />
+                      {current.jurisdiction.real_locations && (
+                        <p className="map-note">
+                          Polling places from {current.jurisdiction.source}.
+                          Workers are demo data.
+                        </p>
+                      )}
+                    </section>
+                    <section className="panel">
+                      <h2>Long-line risk by site</h2>
+                      {plan ? (
+                        <>
+                          <RiskChart simulation={plan.simulation} />
+                          <p className="small">
+                            Share of 5,000 simulated Election Days where the
+                            site’s wait passes 30 minutes.
                           </p>
-                        </section>
-                        <section className="panel">
-                          <div className="section-heading">
-                            <div>
-                              <h2>Queue risk</h2>
-                              <p>Check-in staffing drives this model.</p>
-                            </div>
+                        </>
+                      ) : (
+                        <div className="empty">
+                          <BarChart3 size={34} />
+                          <p>Build the plan to see each site’s risk.</p>
+                        </div>
+                      )}
+                    </section>
+                  </div>
+                  <div className="location-grid">
+                    {current.locations.map((loc) => {
+                      const assigned =
+                        plan?.assignments.filter(
+                          (a) => a.location_id === loc.id,
+                        ) ?? [];
+                      const risk = plan?.simulation.locations.find(
+                        (l) => l.id === loc.id,
+                      );
+                      const need = loc.requirements.reduce(
+                        (n, r) => n + r.desired,
+                        0,
+                      );
+                      const full = plan && assigned.length >= need;
+                      return (
+                        <section className="panel location-card" key={loc.id}>
+                          <div className="location-top">
+                            <h3>{loc.name}</h3>
+                            {plan && (
+                              <span
+                                className={full ? "chip done" : "chip warn"}
+                              >
+                                {Math.min(assigned.length, need)}/{need}
+                                {assigned.length > need
+                                  ? ` +${assigned.length - need}`
+                                  : ""}
+                              </span>
+                            )}
                           </div>
-                          {plan ? (
-                            <>
-                              <RiskChart simulation={plan.simulation} />
-                              <p className="small">
-                                5,000 seeded no-show scenarios. Percentage with
-                                modeled expected wait &gt;30 minutes at each
-                                site, including unstable queues.
-                              </p>
-                              <p className="small">
-                                Not an individual voter’s probability of waiting
-                                &gt;30 minutes.
-                              </p>
-                            </>
-                          ) : (
-                            <div className="empty">
-                              <BarChart3 size={36} />
-                              <h3>See the impact of your plan</h3>
-                              <p>
-                                Generate assignments to calculate location-level
-                                queue risk.
-                              </p>
-                            </div>
+                          <p className="small">
+                            {loc.address ??
+                              `Precincts ${loc.precincts.join(", ")}`}
+                          </p>
+                          <div className="progress">
+                            <span
+                              style={{
+                                width: `${need ? Math.min(100, (assigned.length / need) * 100) : 100}%`,
+                              }}
+                            />
+                          </div>
+                          <div className="role-counts">
+                            {loc.requirements.map((r) => (
+                              <div key={r.role}>
+                                <span>{r.role}</span>
+                                <strong>
+                                  {
+                                    assigned.filter((a) => a.role === r.role)
+                                      .length
+                                  }
+                                  /{r.desired}
+                                </strong>
+                              </div>
+                            ))}
+                          </div>
+                          {risk && (
+                            <p
+                              className={
+                                risk.risk_percent > 30
+                                  ? "site-risk bad"
+                                  : "site-risk"
+                              }
+                            >
+                              Long-line risk{" "}
+                              <strong>{risk.risk_percent}%</strong>
+                            </p>
                           )}
                         </section>
-                      </div>
-                      <div className="location-grid">
-                        {current.locations.map((loc) => {
-                          const assigned =
-                            plan?.assignments.filter(
-                              (a) => a.location_id === loc.id,
-                            ) ?? [];
-                          const risk = plan?.simulation.locations.find(
-                            (l) => l.id === loc.id,
-                          );
-                          const need = loc.requirements.reduce(
-                            (n, r) => n + r.desired,
-                            0,
-                          );
-                          return (
-                            <section
-                              className="panel location-card"
-                              key={loc.id}
-                            >
-                              <div className="section-heading">
-                                <MapPin size={20} />
-                                <span className="pill">
-                                  {Math.min(assigned.length, need)}/{need}{" "}
-                                  staffed
-                                  {assigned.length > need
-                                    ? ` · +${assigned.length - need} surge`
-                                    : ""}
-                                </span>
-                              </div>
-                              <h3>{loc.name}</h3>
-                              <p className="small">
-                                {loc.address
-                                  ? loc.address
-                                  : `Precincts ${loc.precincts.join(" · ")}`}
-                              </p>
-                              {loc.address && (
-                                <span className="pill live-pill">
-                                  {loc.official
-                                    ? "Official polling place"
-                                    : "Polling place"}
-                                </span>
-                              )}
-                              <div className="progress">
-                                <span
-                                  style={{
-                                    width: `${need ? Math.min(100, (assigned.length / need) * 100) : 100}%`,
-                                  }}
-                                />
-                              </div>
-                              <div className="role-counts">
-                                {loc.requirements.map((r) => (
-                                  <div key={r.role}>
-                                    <span>{r.role}</span>
-                                    <strong>
-                                      {
-                                        assigned.filter(
-                                          (a) => a.role === r.role,
-                                        ).length
-                                      }
-                                      /{r.desired}
-                                    </strong>
-                                  </div>
-                                ))}
-                              </div>
-                              {risk && (
-                                <p className="small">
-                                  Risk scenarios:{" "}
-                                  <strong>{risk.risk_percent}%</strong>
-                                  <br />
-                                  Unstable: {risk.unstable_percent}% · Zero
-                                  staff: {risk.zero_staff_percent}%<br />
-                                  All-attend expected wait:{" "}
-                                  {risk.all_attend_expected_wait_minutes ===
-                                  null
-                                    ? "Unstable / no finite steady-state wait"
-                                    : `${risk.all_attend_expected_wait_minutes} min`}
-                                </p>
-                              )}
-                            </section>
-                          );
-                        })}
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+              {tab === "Workers" && (
+                <div className="worker-grid">
+                  <section className="panel worker-list">
+                    <h2>Workers</h2>
+                    <p className="small">Pick someone to review.</p>
+                    {workers.map((w) => (
+                      <button
+                        className={
+                          worker?.id === w.id
+                            ? "worker selected-worker"
+                            : "worker"
+                        }
+                        key={w.id}
+                        onClick={() => setWorkerId(w.id)}
+                      >
+                        <span className="person-avatar">
+                          {w.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </span>
+                        <span>
+                          <strong>{w.name}</strong>
+                          <small>
+                            {w.id}, {w.confirmed_skills.length} skills
+                          </small>
+                        </span>
+                        {w.cancelled && (
+                          <span className="chip bad">Cancelled</span>
+                        )}
+                      </button>
+                    ))}
+                  </section>
+                  {worker && (
+                    <WorkerEditor
+                      key={`${formEpoch}-${selected}-${worker.id}`}
+                      worker={worker}
+                      skills={data.skills}
+                      locked={!!plan}
+                      request={request}
+                      save={async (w) => {
+                        setData(
+                          await request(
+                            `/jurisdictions/${selected}/workers/${w.id}`,
+                            "PUT",
+                            w,
+                          ),
+                        );
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+              {tab === "Plan" && (
+                <section className="panel">
+                  <div className="section-heading">
+                    <h2>Who goes where</h2>
+                    {plan && (
+                      <span className="chip">
+                        {plan.assignments.length} assigned
+                      </span>
+                    )}
+                  </div>
+                  {!plan ? (
+                    <div className="empty">
+                      <ClipboardList size={34} />
+                      <p>Build the plan to see assignments.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {plan.gaps.length > 0 && (
+                        <div className="notice">
+                          Still open:{" "}
+                          {plan.gaps
+                            .map(
+                              (g) => `${g.unfilled} ${g.role} at ${g.location}`,
+                            )
+                            .join(", ")}
+                        </div>
+                      )}
+                      <div className="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Worker</th>
+                              <th>Site and job</th>
+                              <th>Fit</th>
+                              <th>Why</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {plan.assignments.map((a) => (
+                              <tr key={a.worker_id}>
+                                <td>
+                                  <strong>{a.worker_name}</strong>
+                                  <small>{a.worker_id}</small>
+                                </td>
+                                <td>
+                                  {
+                                    current.locations.find(
+                                      (l) => l.id === a.location_id,
+                                    )?.name
+                                  }
+                                  <small>{a.role}</small>
+                                </td>
+                                <td>
+                                  <span className="score">{a.score}</span>
+                                  <small>{a.travel_km} km</small>
+                                </td>
+                                <td className="reason">{a.reason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     </>
                   )}
-                  {tab === "Workers" && (
-                    <div className="worker-grid">
-                      <section className="panel worker-list">
-                        <h2>Worker roster</h2>
-                        <p className="small">
-                          50 synthetic profiles · choose one to review
-                        </p>
-                        {workers.map((w) => (
-                          <button
-                            className={
-                              worker?.id === w.id
-                                ? "worker selected-worker"
-                                : "worker"
-                            }
-                            key={w.id}
-                            onClick={() => setWorkerId(w.id)}
-                          >
-                            <span className="person-avatar">
-                              {w.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </span>
-                            <span>
-                              <strong>{w.name}</strong>
-                              <small>
-                                {w.id} · {w.confirmed_skills.length} confirmed
-                                skills
-                              </small>
-                            </span>
-                            {w.cancelled && (
-                              <span className="cancelled">Cancelled</span>
-                            )}
-                          </button>
-                        ))}
-                      </section>
-                      {worker && (
-                        <WorkerEditor
-                          key={`${formEpoch}-${selected}-${worker.id}`}
-                          worker={worker}
-                          skills={data.skills}
-                          locked={!!plan}
-                          request={request}
-                          save={async (w) => {
-                            setData(
-                              await request(
-                                `/jurisdictions/${selected}/workers/${w.id}`,
-                                "PUT",
-                                w,
-                              ),
-                            );
-                          }}
-                        />
-                      )}
+                </section>
+              )}
+              {tab === "Sites" && (
+                <section className="panel">
+                  <h2>Staffing needs</h2>
+                  <p className="small">
+                    Minimums must be met. Desired counts are goals.
+                    {plan ? " Reset the demo to make changes." : ""}
+                  </p>
+                  <div className="budget-editor">
+                    <div>
+                      <h3>Extra check-in workers</h3>
+                      <p className="small">
+                        PollCREW puts them where lines would be longest.
+                      </p>
                     </div>
-                  )}
-                  {tab === "Assignments" && (
-                    <section className="panel">
-                      <div className="section-heading">
-                        <div>
-                          <h2>Every assignment has a reason</h2>
-                          <p>
-                            Confirmed skills, full-shift availability, training,
-                            and travel.
-                          </p>
-                        </div>
-                        <span className="pill">
-                          {plan?.assignments.length ?? 0} assignments
-                        </span>
-                      </div>
-                      {!plan ? (
-                        <div className="empty">
-                          Generate assignments to review matches.
-                        </div>
-                      ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      aria-label="Extra check-in staff budget"
+                      disabled={!!plan || !!busy}
+                      value={budgetDraft ?? String(current.surge_budget)}
+                      onChange={(e) => setBudgetDraft(e.target.value)}
+                    />
+                    <button
+                      className="secondary"
+                      disabled={!!plan || !!busy || budgetDraft === null}
+                      onClick={async () => {
+                        setError("");
+                        setNotice("");
+                        try {
+                          setData(
+                            await request(
+                              `/jurisdictions/${selected}/budget`,
+                              "PUT",
+                              { surge_budget: Number(budgetDraft) },
+                            ),
+                          );
+                          setBudgetDraft(null);
+                          setNotice("Budget saved.");
+                        } catch (e) {
+                          setError((e as Error).message);
+                        }
+                      }}
+                    >
+                      Save budget
+                    </button>
+                  </div>
+                  {current.locations.map((loc) => (
+                    <LocationEditor
+                      key={`${formEpoch}-${selected}-${loc.id}`}
+                      location={loc}
+                      skills={data.skills}
+                      locked={!!plan}
+                      save={async (l) => {
+                        setData(
+                          await request(
+                            `/jurisdictions/${selected}/locations/${l.id}`,
+                            "PUT",
+                            l,
+                          ),
+                        );
+                      }}
+                    />
+                  ))}
+                </section>
+              )}
+              {tab === "Results" && (
+                <section className="panel">
+                  <h2>How much shorter are the lines?</h2>
+                  {plan && current.baseline ? (
+                    (() => {
+                      const initial = current.before ?? plan;
+                      const base = current.baseline;
+                      const none = current.curve?.[0]?.even_risk_percent;
+                      return (
                         <>
-                          {plan.gaps.length > 0 && (
-                            <div className="notice">
-                              {plan.gaps
-                                .map(
-                                  (g) =>
-                                    `${g.location}: ${g.unfilled} unfilled ${g.role}`,
-                                )
-                                .join(" · ")}
+                          <div className="scoreboard">
+                            {none != null && (
+                              <div>
+                                <strong>{none}%</strong>
+                                <span>No extra staff</span>
+                              </div>
+                            )}
+                            <div>
+                              <strong>
+                                {base.simulation.analytic_risk_percent}%
+                              </strong>
+                              <span>
+                                {base.surge_budget} extra, spread evenly
+                              </span>
                             </div>
-                          )}
-                          <div className="table-wrap">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>Worker</th>
-                                  <th>Location / role</th>
-                                  <th>Match</th>
-                                  <th>Why this match</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {plan.assignments.map((a) => (
-                                  <tr key={a.worker_id}>
-                                    <td>
-                                      <strong>{a.worker_name}</strong>
-                                      <small>{a.worker_id}</small>
-                                    </td>
-                                    <td>
-                                      {
-                                        current.locations.find(
-                                          (l) => l.id === a.location_id,
-                                        )?.name
-                                      }
-                                      <small>{a.role}</small>
-                                    </td>
-                                    <td>
-                                      <span className="score">
-                                        {a.score}/100
-                                      </span>
-                                      <small>{a.travel_km} km</small>
-                                    </td>
-                                    <td className="reason">{a.reason}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                            <div className="win">
+                              <strong>
+                                {initial.simulation.analytic_risk_percent}%
+                              </strong>
+                              <span>
+                                Same {initial.surge_budget} extra, placed by
+                                PollCREW
+                              </span>
+                            </div>
                           </div>
-                        </>
-                      )}
-                    </section>
-                  )}
-                  {tab === "Requirements" && (
-                    <section className="panel">
-                      <h2>Configure operational requirements</h2>
-                      <p>
-                        These are coordinator choices, not legal rules. Minimum
-                        counts are hard constraints; desired counts are
-                        optimization targets.
-                      </p>
-                      <div className="budget-editor">
-                        <div>
-                          <h3>Extra check-in staff budget</h3>
                           <p className="small">
-                            How many workers beyond the desired counts the
-                            county can deploy. PollCREW places them where they
-                            cut line risk the most.
+                            Chance at least one site has a 30+ minute wait.
                           </p>
-                        </div>
-                        <label>
-                          Extra workers
-                          <input
-                            type="number"
-                            min={0}
-                            max={20}
-                            aria-label="Extra check-in staff budget"
-                            disabled={!!plan || !!busy}
-                            value={budgetDraft ?? String(current.surge_budget)}
-                            onChange={(e) => setBudgetDraft(e.target.value)}
-                          />
-                        </label>
-                        <button
-                          className="secondary"
-                          disabled={!!plan || !!busy || budgetDraft === null}
-                          onClick={async () => {
-                            setError("");
-                            setNotice("");
-                            try {
-                              setData(
-                                await request(
-                                  `/jurisdictions/${selected}/budget`,
-                                  "PUT",
-                                  { surge_budget: Number(budgetDraft) },
-                                ),
-                              );
-                              setBudgetDraft(null);
-                              setNotice("Budget saved.");
-                            } catch (e) {
-                              setError((e as Error).message);
-                            }
-                          }}
-                        >
-                          Save budget
-                        </button>
-                      </div>
-                      {current.locations.map((loc) => (
-                        <LocationEditor
-                          key={`${formEpoch}-${selected}-${loc.id}`}
-                          location={loc}
-                          skills={data.skills}
-                          locked={!!plan}
-                          save={async (l) => {
-                            setData(
-                              await request(
-                                `/jurisdictions/${selected}/locations/${l.id}`,
-                                "PUT",
-                                l,
-                              ),
-                            );
-                          }}
-                        />
-                      ))}
-                    </section>
-                  )}
-                  {tab === "Evaluation" && (
-                    <section className="panel">
-                      <h2>Measured against a simple baseline</h2>
-                      <p>
-                        Same workers, requirements, eligibility checks, quality
-                        score, attendance seed, extra-staff budget, and 5,000
-                        simulation runs.
-                      </p>
-                      {plan && current.baseline ? (
-                        <>
                           {current.curve && (
                             <div className="tradeoff">
                               <h3>Same budget, smarter placement</h3>
                               <TradeoffChart
                                 curve={current.curve}
-                                budget={(current.before ?? plan).surge_budget}
+                                budget={initial.surge_budget}
                               />
-                              <p className="small">
-                                Each point re-solves the plan with that many
-                                extra check-in workers. Risk is the exact chance
-                                any site&apos;s modeled wait exceeds 30 minutes.
-                                Even spread hands the same extra workers out
-                                location by location.
-                              </p>
                             </div>
                           )}
+                          <h3>Side by side</h3>
                           <div className="table-wrap">
                             <table>
                               <thead>
                                 <tr>
-                                  <th>Metric</th>
-                                  <th>
-                                    {current.before
-                                      ? "Initial optimized plan"
-                                      : "Optimized plan"}
-                                  </th>
-                                  <th>Greedy baseline, even spread</th>
+                                  <th />
+                                  <th>PollCREW</th>
+                                  <th>Simple fill</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 <tr>
-                                  <td>Coverage</td>
+                                  <td>Spots filled</td>
+                                  <td>{Math.round(initial.coverage * 100)}%</td>
+                                  <td>{Math.round(base.coverage * 100)}%</td>
+                                </tr>
+                                <tr>
+                                  <td>Average fit</td>
+                                  <td>{initial.match_quality}/100</td>
+                                  <td>{base.match_quality}/100</td>
+                                </tr>
+                                <tr>
+                                  <td>Minimums met</td>
+                                  <td>{initial.minimums_met ? "Yes" : "No"}</td>
+                                  <td>{base.minimums_met ? "Yes" : "No"}</td>
+                                </tr>
+                                <tr>
+                                  <td>Extra workers used</td>
                                   <td>
-                                    {Math.round(
-                                      (current.before ?? plan).coverage * 100,
-                                    )}
-                                    %
+                                    {initial.surge_assigned} of{" "}
+                                    {initial.surge_budget}
                                   </td>
                                   <td>
-                                    {Math.round(
-                                      current.baseline.coverage * 100,
-                                    )}
-                                    %
+                                    {base.surge_assigned} of {base.surge_budget}
                                   </td>
                                 </tr>
                                 <tr>
-                                  <td>Mean match quality</td>
+                                  <td>Long-line risk (exact)</td>
                                   <td>
-                                    {(current.before ?? plan).match_quality}/100
-                                  </td>
-                                  <td>{current.baseline.match_quality}/100</td>
-                                </tr>
-                                <tr>
-                                  <td>Eligibility & score preparation</td>
-                                  <td>
-                                    {(current.before ?? plan).preparation_ms} ms
-                                  </td>
-                                  <td>{current.baseline.preparation_ms} ms</td>
-                                </tr>
-                                <tr>
-                                  <td>Assignment selection runtime</td>
-                                  <td>
-                                    {(current.before ?? plan).runtime_ms} ms
-                                  </td>
-                                  <td>{current.baseline.runtime_ms} ms</td>
-                                </tr>
-                                <tr>
-                                  <td>Configured minimums met</td>
-                                  <td>
-                                    {(current.before ?? plan).minimums_met
-                                      ? "Yes"
-                                      : "No"}
+                                    {initial.simulation.analytic_risk_percent}%
                                   </td>
                                   <td>
-                                    {current.baseline.minimums_met
-                                      ? "Yes"
-                                      : "No"}
+                                    {base.simulation.analytic_risk_percent}%
                                   </td>
                                 </tr>
                                 <tr>
-                                  <td>Extra check-in workers used</td>
-                                  <td>
-                                    {(current.before ?? plan).surge_assigned} of{" "}
-                                    {(current.before ?? plan).surge_budget}
-                                  </td>
-                                  <td>
-                                    {current.baseline.surge_assigned} of{" "}
-                                    {current.baseline.surge_budget}
-                                  </td>
+                                  <td>Long-line risk (5,000 runs)</td>
+                                  <td>{initial.simulation.risk_percent}%</td>
+                                  <td>{base.simulation.risk_percent}%</td>
                                 </tr>
                                 <tr>
-                                  <td>Exact line risk</td>
-                                  <td>
-                                    {
-                                      (current.before ?? plan).simulation
-                                        .analytic_risk_percent
-                                    }
-                                    %
-                                  </td>
-                                  <td>
-                                    {
-                                      current.baseline.simulation
-                                        .analytic_risk_percent
-                                    }
-                                    %
-                                  </td>
+                                  <td>Time to plan</td>
+                                  <td>{initial.runtime_ms} ms</td>
+                                  <td>{base.runtime_ms} ms</td>
                                 </tr>
-                                <tr>
-                                  <td>Queue-risk scenarios</td>
-                                  <td>
-                                    {
-                                      (current.before ?? plan).simulation
-                                        .risk_percent
-                                    }
-                                    %
-                                  </td>
-                                  <td>
-                                    {current.baseline.simulation.risk_percent}%
-                                  </td>
-                                </tr>
-                                {current.impact?.recovered != null && (
+                                {impact?.recovered != null && (
                                   <>
                                     <tr>
-                                      <td>Cancellation recovery</td>
+                                      <td>Cancellations fixed</td>
                                       <td>
-                                        {current.impact.recovered} /{" "}
-                                        {current.impact.lost_assignments}{" "}
-                                        affected
+                                        {impact.recovered} /{" "}
+                                        {impact.lost_assignments} affected
                                       </td>
                                       <td>
-                                        {current.impact.baseline_recovered} /{" "}
-                                        {current.impact.baseline_affected}{" "}
-                                        affected
+                                        {impact.baseline_recovered} /{" "}
+                                        {impact.baseline_affected} affected
                                       </td>
                                     </tr>
                                     <tr>
-                                      <td>Recovery runtime</td>
+                                      <td>Time to fix</td>
                                       <td>{plan.runtime_ms} ms</td>
-                                      <td>
-                                        {current.impact.baseline_recovery_ms} ms
-                                      </td>
+                                      <td>{impact.baseline_recovery_ms} ms</td>
                                     </tr>
                                   </>
                                 )}
                               </tbody>
                             </table>
                           </div>
-                          <p className="small">
-                            Baseline: process locations and roles in fixed
-                            order, fill minimums first, then desired counts,
-                            then hand out the extra-staff budget one worker per
-                            location in turn; choose the highest-scoring
-                            remaining eligible worker at each step. It can fail
-                            a minimum because it does not globally reserve
-                            scarce skills. No baseline is deliberately weakened.
-                          </p>
-                          <p className="small">
-                            Recovery applies the same cancelled worker IDs to
-                            both initial plans and locks each plan’s unaffected
-                            assignments. Different initial assignments can mean
-                            different affected counts. Selection runtime
-                            excludes eligibility, score preparation, model
-                            loading, and queue simulation. Preparation is
-                            reported separately and depends on the model cache.
-                            Timings vary by machine.
-                          </p>
                         </>
-                      ) : (
-                        <div className="empty">
-                          Generate a plan to run the comparison.
-                        </div>
-                      )}
-                      <details className="assumptions">
-                        <summary>Model assumptions and limitations</summary>
-                        <p>
-                          Independent 92% attendance per assigned worker.
-                          Constant, jurisdiction-specific Poisson arrivals.
-                          Exponential service times averaging 2.5 minutes by
-                          default. M/M/c steady-state expected wait with c equal
-                          to attending check-in workers. Zero servers with
-                          positive demand and arrival rates at or above service
-                          capacity are explicitly unstable (infinite modeled
-                          wait). No finite-day queue buildup, correlated
-                          no-shows, breaks, or empirical calibration is modeled.
-                        </p>
-                        <p>
-                          The optimizer uses the exact probability of a long
-                          line for each possible check-in count (a
-                          Poisson-binomial over attendance combined with the
-                          M/M/c wait), and minimizes the chance that any site
-                          exceeds 30 minutes within the extra-staff budget. The
-                          5,000-run Monte Carlo independently checks that
-                          figure.
-                        </p>
-                        <p>
-                          Matching mode:{" "}
-                          {data.matching_mode === "offline"
-                            ? "Offline exact confirmed-skill overlap"
-                            : "Sentence-transformers contextual similarity of confirmed skill descriptions"}
-                          . Scores combine 70% skill similarity and 30% travel
-                          proximity. Required skills remain hard checks in both
-                          modes.
-                        </p>
-                      </details>
-                      <h3>Demo activity</h3>
-                      <ol className="activity">
-                        {current.events.map((e, i) => (
-                          <li key={i}>{e}</li>
-                        ))}
-                      </ol>
-                    </section>
+                      );
+                    })()
+                  ) : (
+                    <div className="empty">
+                      <BarChart3 size={34} />
+                      <p>Build the plan to compare.</p>
+                    </div>
                   )}
-                </>
+                  <details className="assumptions">
+                    <summary>How we measured</summary>
+                    <p>
+                      Simple fill goes site by site, fills minimums, then
+                      desired counts, then hands out extra workers one per site
+                      in turn, always picking the best remaining eligible
+                      worker. It is not weakened on purpose.
+                    </p>
+                    <p>
+                      Each assigned worker shows up with 92% probability. Voters
+                      arrive at a steady random rate and check-in takes 2.5
+                      minutes on average (an M/M/c queue). PollCREW computes the
+                      exact chance of a 30+ minute wait for every possible
+                      check-in count and minimizes the chance that any site goes
+                      over, within the extra-staff budget. 5,000 simulated days
+                      check that number. No breaks, correlated no-shows, or
+                      morning rush are modeled.
+                    </p>
+                    <p>
+                      Matching:{" "}
+                      {data.matching_mode === "offline"
+                        ? "exact overlap of confirmed skills"
+                        : "sentence-embedding similarity of confirmed skills"}
+                      , 70% skills and 30% travel distance. Required skills are
+                      always hard rules. Timings vary by machine.
+                    </p>
+                  </details>
+                  <details className="assumptions">
+                    <summary>Activity log</summary>
+                    <ol className="activity">
+                      {current.events.map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                    </ol>
+                  </details>
+                </section>
               )}
-              <footer>
-                <span>PollCREW · Hack/OHIO 2026</span>
-                <span>
-                  Synthetic data only ·{" "}
-                  {data.extraction_mode === "offline"
-                    ? "Offline extraction demo"
-                    : "AI extraction enabled"}{" "}
-                  ·{" "}
-                  {data.matching_mode === "offline"
-                    ? "Exact-skill matching"
-                    : "Contextual skill matching"}
-                </span>
-                <span>Built with AI assistance</span>
-              </footer>
             </>
           )}
+          <footer>
+            <span>PollCREW, HackOHI/O 2026</span>
+            <span>Demo data only. Built with AI assistance.</span>
+          </footer>
         </div>
       </main>
     </div>
   );
 }
 function Stat({
-  icon,
   value,
   label,
   detail,
+  tone,
 }: {
-  icon: React.ReactNode;
   value: string;
   label: string;
-  detail: string;
+  detail?: string;
+  tone?: "bad";
 }) {
   return (
-    <section className="stat">
-      <div className="stat-top">
-        <span>{label}</span>
-        {icon}
-      </div>
+    <section className={tone ? `stat ${tone}` : "stat"}>
+      <span className="stat-label">{label}</span>
       <strong>{value}</strong>
-      <p>{detail}</p>
+      {detail && <p>{detail}</p>}
     </section>
   );
 }

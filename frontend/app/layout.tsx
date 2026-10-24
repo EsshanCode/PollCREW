@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import "@fontsource/fredoka/500.css";
+import "@fontsource/fredoka/600.css";
+import "@fontsource/fredoka/700.css";
+import "@fontsource/atkinson-hyperlegible/400.css";
+import "@fontsource/atkinson-hyperlegible/700.css";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "PollCREW · People make elections work",
-  description: "A nonpartisan, synthetic election staffing demonstration.",
+  title: "PollCREW: every precinct crewed",
+  description: "Nonpartisan election-day poll worker staffing demo.",
 };
 export default function RootLayout({
   children,

@@ -21,7 +21,7 @@ export default function RiskChart({ simulation }: { simulation: Simulation }) {
             y: simulation.locations.map((l) => l.risk_percent),
             marker: {
               color: simulation.locations.map((l) =>
-                l.risk_percent > 30 ? "#cf792c" : "#087f75",
+                l.risk_percent > 30 ? "#c8243b" : "#1d2b53",
               ),
             },
             hovertemplate: "%{x}<br>%{y:.2f}% of scenarios<extra></extra>",
@@ -32,8 +32,25 @@ export default function RiskChart({ simulation }: { simulation: Simulation }) {
           margin: { t: 10, b: 60, l: 42, r: 15 },
           paper_bgcolor: "transparent",
           plot_bgcolor: "transparent",
-          yaxis: { range: [0, 100], ticksuffix: "%", gridcolor: "#e7eceb" },
-          font: { family: "Arial", size: 11, color: "#536477" },
+          yaxis: {
+            range: [
+              0,
+              Math.min(
+                100,
+                Math.max(
+                  5,
+                  ...simulation.locations.map((l) => l.risk_percent * 1.3),
+                ),
+              ),
+            ],
+            ticksuffix: "%",
+            gridcolor: "#e3e9f5",
+          },
+          font: {
+            family: "Atkinson Hyperlegible, Arial",
+            size: 12,
+            color: "#4a5578",
+          },
         },
         { responsive: true, displayModeBar: false },
       );

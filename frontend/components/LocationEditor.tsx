@@ -17,18 +17,14 @@ export default function LocationEditor({
   const [busy, setBusy] = useState(false);
   return (
     <details className="location-config">
-      <summary>Configure {location.name}</summary>
+      <summary>Edit {location.name}</summary>
       <fieldset disabled={locked || busy}>
-        <p className="small">
-          Coordinator-defined operational requirements. Travel uses
-          straight-line kilometers.
-        </p>
         {draft.requirements.map((r, i) => (
           <div className="requirement" key={r.role}>
             <h3>{r.role}</h3>
             <div className="form-grid">
               <label>
-                Desired workers
+                Desired
                 <input
                   type="number"
                   min="0"
@@ -45,7 +41,7 @@ export default function LocationEditor({
                 />
               </label>
               <label>
-                Required minimum
+                Minimum
                 <input
                   type="number"
                   min="0"
@@ -157,7 +153,7 @@ export default function LocationEditor({
             setBusy(true);
             try {
               await save(draft);
-              setMessage("Requirements saved.");
+              setMessage("Site saved.");
             } catch (e) {
               setMessage((e as Error).message);
             } finally {
@@ -165,7 +161,7 @@ export default function LocationEditor({
             }
           }}
         >
-          Save requirements
+          Save site
         </button>
       </fieldset>
       <p role="status">{message}</p>

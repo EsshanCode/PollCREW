@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { AppState, Jurisdiction, Worker } from "@/components/types";
+import { LogoMark, Mascot } from "@/components/Brand";
 import { Lang, ROLE_TEXT, SKILL_TEXT, TEXT } from "./strings";
 import "./worker.css";
 
@@ -328,9 +329,7 @@ export default function WorkerPage() {
     <div className={`wk ${large ? "wk-large" : ""}`}>
       <header className="wk-top">
         <a className="wk-brand" href="/worker">
-          <span className="wk-mark">
-            <Check size={20} strokeWidth={3} aria-hidden />
-          </span>
+          <LogoMark size={40} />
           <span>
             Poll<span>CREW</span>
           </span>
@@ -354,7 +353,6 @@ export default function WorkerPage() {
           </button>
         </div>
       </header>
-      <div className="wk-glow" aria-hidden />
       <main className="wk-main">
         {previous[step] && (
           <button
@@ -623,7 +621,8 @@ export default function WorkerPage() {
 
         {step === "saved" && (
           <Message
-            icon={<Check size={40} strokeWidth={3} />}
+            art={<Mascot size={150} wave />}
+            icon={null}
             title={t.savedTitle}
             body={t.savedBody}
             tone="good"
@@ -833,12 +832,14 @@ function Row({
 }
 
 function Message({
+  art,
   icon,
   title,
   body,
   tone,
   children,
 }: {
+  art?: React.ReactNode;
   icon: React.ReactNode;
   title: string;
   body: string;
@@ -847,9 +848,11 @@ function Message({
 }) {
   return (
     <section className={`wk-message ${tone}`} role="status">
-      <span className="wk-message-icon" aria-hidden>
-        {icon}
-      </span>
+      {art ?? (
+        <span className="wk-message-icon" aria-hidden>
+          {icon}
+        </span>
+      )}
       <h1>{title}</h1>
       <p className="wk-lead">{body}</p>
       {children}

@@ -26,7 +26,7 @@ Checked on October 24, 2026, on Linux with Python 3.13, Node 22, OR-Tools CP-SAT
 
 - Backend: 22 passing tests, including exact-versus-Monte-Carlo risk agreement (within 1.5 points), the extra-staff budget, risk-aware allocation beating even spread in all three jurisdictions, recovery restoring pre-cancellation risk, and the budget API.
 - Frontend: strict TypeScript check and production build.
-- Browser: both Playwright tests pass, including budget editing and the trade-off chart rendering on the Evaluation tab.
+- Browser: both Playwright tests pass, including budget editing and the trade-off chart rendering on the Results tab.
 - `benchmark-results.json` was regenerated in offline matching mode; contextual (sentence-transformers) matching was not re-run for this update.
 
 ## Poll worker view and real polling places

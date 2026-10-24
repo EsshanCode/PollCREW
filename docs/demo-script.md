@@ -6,17 +6,17 @@ Before recording, start both servers, prewarm the embedding model, open the app,
 
 “PollCREW coordinates election-worker staffing across jurisdictions. This is a nonpartisan prototype with 150 synthetic workers in North Carolina, Wisconsin, and Arizona. These markers show demo coverage, not a live national feed.”
 
-Select Wake County.
+Click **Start the demo** (opens Wake County).
 
 **0:20–0:55 · Worker skills**
 
-Open Workers and select Jordan Rivera. Enter: “I helped with registration and data entry. I troubleshoot tablets and printers. I led a team of volunteers.” Click Extract suggested skills. Confirm check-in, reject equipment, and confirm leadership. Save the profile.
+Open Workers and select Jordan Rivera. Enter: “I helped with registration and data entry. I troubleshoot tablets and printers. I led a team of volunteers.” Click **Suggest skills**. Confirm check-in, reject equipment, and confirm leadership. Click **Save profile**.
 
 “Experience becomes suggested skills with supporting text. This demonstration uses visibly labeled offline extraction; a server-side AI extraction option is available. Workers choose what to confirm. Rejected and unconfirmed skills cannot influence matching.”
 
 **0:55–1:20 · Generate and explain**
 
-Click Generate assignments. Open Assignments.
+Click **Build the plan** in the Next step card. Open the **Plan** tab.
 
 “CP-SAT builds the plan from confirmed skills, full-shift availability, training, travel limits, and coordinator-defined staffing requirements. Wake can deploy six extra check-in workers; the solver puts them where they cut long-line risk the most. Each assignment explains the match. The LLM does not assign anyone.”
 
@@ -26,7 +26,7 @@ Approve the plan. Open Overview.
 
 “Queue risk comes from 5,000 seeded no-show scenarios, checked against an exact calculation. With no extra staff, there’s a 52% chance some Wake site has a modeled wait over thirty minutes. Spreading six extra workers evenly gets that to about 11%. PollCREW places the same six and gets it to under 3%.”
 
-Open Evaluation. Point to the trade-off chart and the exact line-risk row. It is not an individual voter’s wait probability.
+Open **Results**. Point to the three big numbers (no extra staff, even spread, PollCREW) and the trade-off chart. It is not an individual voter’s wait probability.
 
 **1:40–2:15 · Cancellation recovery**
 

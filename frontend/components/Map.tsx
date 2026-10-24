@@ -27,9 +27,9 @@ export default function Map({
         if (active)
           L.geoJSON(states, {
             style: {
-              color: "#b6c8c1",
+              color: "#b9c6e0",
               weight: 1,
-              fillColor: "#edf2e9",
+              fillColor: "#f7f9fe",
               fillOpacity: selected ? 0 : 1,
             },
             interactive: false,
@@ -51,10 +51,10 @@ export default function Map({
           0;
         const need = loc.requirements.reduce((sum, r) => sum + r.desired, 0);
         const color = !d.plan
-          ? "#668398"
+          ? "#8a94ad"
           : count < need
-            ? "#ce7826"
-            : "#087f75";
+            ? "#f2b632"
+            : "#1d2b53";
         const marker = L.circleMarker([loc.lat, loc.lon], {
           radius: 12,
           color: "#fff",
@@ -63,7 +63,7 @@ export default function Map({
           fillOpacity: 1,
         }).addTo(map);
         const label = document.createElement("div");
-        label.textContent = `${loc.name} · ${count}/${need} assigned · ${loc.precincts.length} precincts`;
+        label.textContent = `${loc.name}: ${count}/${need} staffed`;
         marker.bindTooltip(label, { direction: "top" });
       });
     } else {
@@ -74,13 +74,13 @@ export default function Map({
             radius: 13,
             color: "#fff",
             weight: 3,
-            fillColor: "#087f75",
+            fillColor: "#c8243b",
             fillOpacity: 1,
           },
         ).addTo(map);
         marker.on("click", () => onSelect(d.jurisdiction.id));
         const label = document.createElement("div");
-        label.textContent = `${d.jurisdiction.name}, ${d.jurisdiction.code} · synthetic demo`;
+        label.textContent = `${d.jurisdiction.name}, ${d.jurisdiction.code}`;
         marker.bindTooltip(label, {
           permanent: true,
           direction: "top",

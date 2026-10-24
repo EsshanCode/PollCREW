@@ -6,7 +6,9 @@ test("complete worker confirmation, assignment, cancellation, recovery, approval
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Every location. The right crew." }),
+    page.getByRole("heading", {
+      name: "Every precinct crewed. Every line short.",
+    }),
   ).toBeVisible();
   await expect(page.getByText("150", { exact: true })).toBeVisible();
   await page.screenshot({
@@ -20,14 +22,14 @@ test("complete worker confirmation, assignment, cancellation, recovery, approval
   await expect(
     page.getByRole("heading", { name: "Wake County", exact: true }),
   ).not.toBeVisible();
-  await page.getByRole("button", { name: "Open demo jurisdiction" }).click();
+  await page.getByRole("button", { name: "Start the demo" }).click();
   await page.getByRole("button", { name: "Workers", exact: true }).click();
   await page
     .getByLabel("Experience", { exact: true })
     .fill(
       "I helped with registration and data entry. I troubleshoot tablets and printers. I led a team of volunteers.",
     );
-  await page.getByRole("button", { name: "Extract suggested skills" }).click();
+  await page.getByRole("button", { name: "Suggest skills" }).click();
   await expect(
     page.getByText("Offline keyword demo · no LLM call"),
   ).toBeVisible();
@@ -43,25 +45,23 @@ test("complete worker confirmation, assignment, cancellation, recovery, approval
     .getByRole("button", { name: "Confirm", exact: true })
     .first()
     .click();
-  await page.getByRole("button", { name: "Save confirmed profile" }).click();
+  await page.getByRole("button", { name: "Save profile" }).click();
   await expect(
-    page.getByText(
-      "Confirmed profile saved. Only these skills will influence matching.",
-    ),
+    page.getByText("Saved. Only ticked skills are used for matching."),
   ).toBeVisible();
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page
-    .getByRole("button", { name: "Generate assignments", exact: true })
+    .getByRole("button", { name: "Build the plan", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Approve plan", exact: true }),
   ).toBeVisible({ timeout: 60000 });
-  await page.getByRole("button", { name: "Assignments", exact: true }).click();
+  await page.getByRole("button", { name: "Plan", exact: true }).click();
   await expect(page.locator("tbody tr")).toHaveCount(34);
   await page.getByRole("button", { name: "Approve plan", exact: true }).click();
   await page.getByRole("button", { name: "Simulate 3 cancellations" }).click();
   await expect(
-    page.getByText("31 assignments preserved", { exact: true }),
+    page.getByText("31 kept in place", { exact: true }),
   ).toBeVisible();
   await expect(page.locator("tbody tr")).toHaveCount(31);
   const locked = await page.locator("tbody tr").allTextContents();
@@ -77,13 +77,15 @@ test("complete worker confirmation, assignment, cancellation, recovery, approval
   await page
     .getByRole("button", { name: "Approve revised plan", exact: true })
     .click();
-  await expect(page.getByText("Plan approved inside the demo.")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Every site is covered again" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page.screenshot({
     path: "test-results/recovered-plan.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Evaluation", exact: true }).click();
+  await page.getByRole("button", { name: "Results", exact: true }).click();
   await expect(
     page.getByRole("cell", { name: "3 / 3 affected" }).first(),
   ).toBeVisible();
@@ -99,7 +101,7 @@ test("complete worker confirmation, assignment, cancellation, recovery, approval
   });
   await page.getByRole("button", { name: "Reset demo" }).click();
   await expect(
-    page.getByRole("button", { name: "Generate assignments", exact: true }),
+    page.getByRole("button", { name: "Build the plan", exact: true }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -110,17 +112,17 @@ test("mobile overview and requirements validation", async ({ page }) => {
   await page
     .getByRole("button", { name: /NC North Carolina Wake County/ })
     .click();
-  await page.getByRole("button", { name: "Requirements", exact: true }).click();
+  await page.getByRole("button", { name: "Sites", exact: true }).click();
   await page.getByLabel("Extra check-in staff budget").fill("4");
   await page.getByRole("button", { name: "Save budget" }).click();
   await expect(page.getByText("Budget saved.")).toBeVisible();
-  await page.getByText("Configure Central Library", { exact: true }).click();
-  await page.getByLabel("Required minimum", { exact: true }).first().fill("20");
-  await page.getByRole("button", { name: "Save requirements" }).first().click();
-  await expect(page.getByText(/Check your inputs/)).toBeVisible();
-  await page.getByLabel("Required minimum", { exact: true }).first().fill("2");
-  await page.getByRole("button", { name: "Save requirements" }).first().click();
-  await expect(page.getByText("Requirements saved.")).toBeVisible();
+  await page.getByText("Edit Central Library", { exact: true }).click();
+  await page.getByLabel("Minimum", { exact: true }).first().fill("20");
+  await page.getByRole("button", { name: "Save site" }).first().click();
+  await expect(page.getByText(/Check your numbers/)).toBeVisible();
+  await page.getByLabel("Minimum", { exact: true }).first().fill("2");
+  await page.getByRole("button", { name: "Save site" }).first().click();
+  await expect(page.getByText("Site saved.")).toBeVisible();
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page.screenshot({ path: "test-results/mobile.png", fullPage: true });
   expect(
@@ -166,12 +168,14 @@ test("poll worker answers questions, sees assignment and cancels", async ({
     .getByRole("button", { name: /NC North Carolina Wake County/ })
     .click();
   await page
-    .getByRole("button", { name: "Generate assignments", exact: true })
+    .getByRole("button", { name: "Build the plan", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Approve plan", exact: true })
     .click({ timeout: 60000 });
-  await expect(page.getByText("Plan approved inside the demo.")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Plan approved", exact: true }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Poll worker view" }).click();
   await page.getByLabel("Search your name").fill("NC-002");
   await page.getByRole("button", { name: /NC-002/ }).click();

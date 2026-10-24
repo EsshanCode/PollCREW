@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { Worker } from "./types";
 export default function WorkerEditor({
   worker,
@@ -32,7 +33,7 @@ export default function WorkerEditor({
       setMode(result.mode);
       if (!result.suggestions.length)
         setMessage(
-          "No supported skills found. You can still edit your confirmed skills below.",
+          "No skills found in that text. You can tick them below instead.",
         );
     } catch (e) {
       setMessage((e as Error).message);
@@ -54,21 +55,20 @@ export default function WorkerEditor({
   }
   return (
     <section className="panel editor">
-      <div className="section-heading">
+      <div className="editor-head">
+        <span className="person-avatar big">
+          {worker.name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")}
+        </span>
         <div>
-          <span className="eyebrow">WORKER PROFILE · {worker.id}</span>
           <h2>{worker.name}</h2>
+          <span className="small">{worker.id}</span>
         </div>
-        <span className="pill">Synthetic worker</span>
       </div>
-      <p>
-        Describe your experience. Suggestions only affect assignments after you
-        confirm and save them.
-      </p>
       {locked && (
-        <p className="notice">
-          This plan has been generated. Reset the demo to edit profiles.
-        </p>
+        <p className="notice">The plan is built. Reset the demo to edit.</p>
       )}
       <fieldset disabled={locked || busy}>
         <label>
@@ -85,7 +85,8 @@ export default function WorkerEditor({
           onClick={extract}
           disabled={!draft.experience.trim()}
         >
-          Extract suggested skills
+          <Sparkles size={16} />
+          Suggest skills
         </button>
         {mode && <p className="small">{mode}</p>}
         {suggestions.map((s) => (
@@ -103,7 +104,7 @@ export default function WorkerEditor({
             </div>
           </div>
         ))}
-        <h3>Confirmed skills</h3>
+        <h3>Skills</h3>
         <div className="skill-options">
           {Object.entries(skills).map(([id, name]) => (
             <label className="check" key={id}>
@@ -118,7 +119,7 @@ export default function WorkerEditor({
         </div>
         <div className="form-grid">
           <label>
-            Available from (hour)
+            Starts (hour)
             <input
               type="number"
               min="0"
@@ -130,7 +131,7 @@ export default function WorkerEditor({
             />
           </label>
           <label>
-            Available until (hour)
+            Ends (hour)
             <input
               type="number"
               min="1"
@@ -142,7 +143,7 @@ export default function WorkerEditor({
             />
           </label>
           <label>
-            Travel limit (km)
+            Max travel (km)
             <input
               type="number"
               min="0"
@@ -160,7 +161,7 @@ export default function WorkerEditor({
             checked={draft.trained}
             onChange={(e) => setDraft({ ...draft, trained: e.target.checked })}
           />
-          Operational training complete
+          Training done
         </label>
         <button
           onClick={async () => {
@@ -168,9 +169,7 @@ export default function WorkerEditor({
             setMessage("");
             try {
               await save(draft);
-              setMessage(
-                "Confirmed profile saved. Only these skills will influence matching.",
-              );
+              setMessage("Saved. Only ticked skills are used for matching.");
             } catch (e) {
               setMessage((e as Error).message);
             } finally {
@@ -178,7 +177,7 @@ export default function WorkerEditor({
             }
           }}
         >
-          Save confirmed profile
+          Save profile
         </button>
       </fieldset>
       <p role="status">{busy ? "Working…" : message}</p>

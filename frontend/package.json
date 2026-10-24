@@ -10,6 +10,8 @@
     "test": "playwright test"
   },
   "dependencies": {
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
+    "@fontsource/fredoka": "^5.3.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
     "next": "^16.0.0",

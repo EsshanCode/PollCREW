@@ -50,24 +50,22 @@ export default function ImportPanel({
     }
   }
   return (
-    <section className="panel import-panel">
-      <div className="section-heading">
-        <div>
-          <h2>Use real polling places</h2>
-          <p>
-            Look up the official Election Day polling place for each address
-            through the Google Civic Information API (Voting Information
-            Project). Workers stay synthetic.
-          </p>
-        </div>
-        <span className={configured ? "pill live-pill" : "pill"}>
-          {configured ? "API key set" : "API key needed"}
+    <details className="panel import-panel">
+      <summary>
+        <MapPin size={18} />
+        Use real polling places
+        <span className={configured ? "chip live" : "chip"}>
+          {configured ? "Ready" : "Needs API key"}
         </span>
-      </div>
+      </summary>
+      <p className="small">
+        Paste voter addresses. PollCREW looks up each one’s official polling
+        place with the Google Civic API. Workers stay demo data.
+      </p>
       {!configured && (
         <p className="small">
           Start the backend with <code>GOOGLE_CIVIC_API_KEY=your-key</code> to
-          enable lookups. Keys are free in the Google Cloud console.
+          turn this on.
         </p>
       )}
       <div className="import-grid">
@@ -121,6 +119,6 @@ export default function ImportPanel({
           ))}
         </ul>
       )}
-    </section>
+    </details>
   );
 }
