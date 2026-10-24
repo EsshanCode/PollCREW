@@ -640,3 +640,6 @@
     animation: none !important;
   }
 }
+.wk-error > svg {
+  flex: none;
+}

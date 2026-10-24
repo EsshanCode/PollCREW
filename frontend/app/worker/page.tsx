@@ -91,6 +91,7 @@ export default function WorkerPage() {
   const [lang, setLang] = useState<Lang>("en");
   const [large, setLarge] = useState(false);
   const [sid, setSid] = useState("");
+  const [retry, setRetry] = useState(0);
   const [data, setData] = useState<AppState | null>(null);
   const [jid, setJid] = useState("");
   const [wid, setWid] = useState("");
@@ -102,11 +103,15 @@ export default function WorkerPage() {
   const t = TEXT[lang];
 
   useEffect(() => {
+    let prefLang: Lang = "en";
     try {
       const stored = localStorage.getItem("pollcrew-worker-prefs");
       if (stored) {
         const prefs = JSON.parse(stored);
-        if (prefs.lang === "es") setLang("es");
+        if (prefs.lang === "es") {
+          setLang("es");
+          prefLang = "es";
+        }
         if (prefs.large) setLarge(true);
       }
     } catch {}
@@ -118,7 +123,7 @@ export default function WorkerPage() {
     } catch {}
     const id = fromUrl || stored;
     const wanted = params.get("j") ?? "";
-    async function init() {
+    async function init(attempt = 0): Promise<void> {
       try {
         let json: AppState & { session_id?: string };
         let session = id;
@@ -143,11 +148,15 @@ export default function WorkerPage() {
           json.jurisdictions[0];
         setJid(first.jurisdiction.id);
       } catch {
-        setError(TEXT.en.noSession);
+        if (attempt < 8) {
+          await new Promise((r) => setTimeout(r, 1500));
+          return init(attempt + 1);
+        }
+        setError(TEXT[prefLang].noSession);
       }
     }
     init();
-  }, []);
+  }, [retry]);
 
   useEffect(() => {
     try {
@@ -386,7 +395,18 @@ export default function WorkerPage() {
             {error}
           </div>
         )}
-        {!data && !error && <p className="wk-lead">…</p>}
+        {!data && error && (
+          <button
+            className="wk-primary"
+            onClick={() => {
+              setError("");
+              setRetry(retry + 1);
+            }}
+          >
+            {t.tryAgain}
+          </button>
+        )}
+        {!data && !error && <p className="wk-lead">{t.loading}</p>}
 
         {data && step === "who" && (
           <section>

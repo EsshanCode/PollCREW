@@ -172,7 +172,9 @@ const EN = {
   busyTitle: "Please try again in a minute",
   error: "Something went wrong. Please try again.",
   noSession:
-    "Open this page from the coordinator workspace so it uses the same demo.",
+    "We can’t reach the PollCREW server right now. Make sure the backend is running, then try again.",
+  tryAgain: "Try again",
+  loading: "Loading…",
   edit: "Edit my answers",
   done: "Done",
   monthShort: "NOV",
@@ -263,7 +265,9 @@ const ES: typeof EN = {
   busyTitle: "Intente de nuevo en un minuto",
   error: "Algo salió mal. Intente de nuevo.",
   noSession:
-    "Abra esta página desde el espacio del coordinador para usar la misma demostración.",
+    "No podemos conectar con el servidor de PollCREW. Asegúrese de que el servidor esté funcionando e intente de nuevo.",
+  tryAgain: "Intentar de nuevo",
+  loading: "Cargando…",
   edit: "Editar mis respuestas",
   done: "Listo",
   monthShort: "NOV",
