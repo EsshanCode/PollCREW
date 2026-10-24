@@ -3,7 +3,16 @@ import math
 import pytest
 from fastapi.testclient import TestClient
 from data import dataset
-from engine import PlanError, eligible, expected_wait, simulate, solve
+from engine import (
+    PlanError,
+    analytic_risk,
+    budget_curve,
+    eligible,
+    expected_wait,
+    simulate,
+    site_risk,
+    solve,
+)
 from extraction import extract
 from main import app, sessions
 
@@ -31,7 +40,9 @@ def test_assignment_constraints(jid):
                 a["location_id"] == l["id"] and a["role"] == r["role"]
                 for a in p["assignments"]
             )
-            assert r["minimum"] <= count <= r["desired"]
+            limit = r["desired"] + (d["surge_budget"] if r["role"] == "Check-in" else 0)
+            assert r["minimum"] <= count <= limit
+    assert p["surge_assigned"] <= d["surge_budget"]
 
 
 def test_rejected_skills_availability_training_travel():
@@ -185,7 +196,15 @@ def test_failed_recovery_preserves_disrupted_state():
     before = copy.deepcopy(data)
     assert c.post(base + "/recover", headers=h).status_code == 409
     assert data == before
-    assert data["plan"]["gaps"][0]["unfilled"] == 3
+    first = data["locations"][0]
+    remaining = sum(
+        a["location_id"] == first["id"] and a["role"] == "Check-in"
+        for a in data["plan"]["assignments"]
+    )
+    assert data["plan"]["gaps"][0]["unfilled"] == (
+        first["requirements"][0]["desired"] - remaining
+    )
+    assert data["plan"]["simulation"]["analytic_risk_percent"] == 100
 
 
 def test_soft_desired_gap_and_hard_minimum_distinction():
@@ -222,3 +241,75 @@ def test_live_extraction_validates_evidence(monkeypatch):
     monkeypatch.setattr(extraction.httpx, "post", lambda *a, **kw: Response())
     with pytest.raises(ValueError, match="unsupported evidence"):
         extract("I helped at registration.")
+
+
+def test_exact_risk_matches_monte_carlo():
+    d = dataset()["maricopa-az"]
+    p = solve(d)
+    sim = simulate(d, p["assignments"])
+    assert abs(sim["risk_percent"] - sim["analytic_risk_percent"]) < 1.5
+    assert sim["analytic_risk_percent"] == analytic_risk(d, p["assignments"])
+    for site in sim["locations"]:
+        assert abs(site["risk_percent"] - site["analytic_risk_percent"]) < 1.5
+    assert site_risk(80, 2.5, [1.0] * 3) == 1
+    assert site_risk(80, 2.5, [1.0] * 4) == 0
+    assert abs(site_risk(74, 2.5, [0.92] * 4) - (1 - 0.92**4)) < 1e-9
+
+
+@pytest.mark.parametrize("jid", ["wake-nc", "dane-wi", "maricopa-az"])
+def test_optimizer_allocates_surge_better_than_even_spread(jid):
+    d = dataset()[jid]
+    for b in [2, 4, 6]:
+        optimized = analytic_risk(d, solve(d, budget=b)["assignments"])
+        even = analytic_risk(d, solve(d, baseline=True, budget=b)["assignments"])
+        assert optimized < even
+
+
+def test_budget_lowers_risk_and_is_respected():
+    d = dataset()["wake-nc"]
+    curve = budget_curve(d, 8)
+    risks = [point["optimized_risk_percent"] for point in curve]
+    assert all(a >= b for a, b in zip(risks, risks[1:]))
+    assert risks[0] > 50 and risks[-1] < 5
+    assert all(point["optimized_surge"] <= point["budget"] for point in curve)
+    assert all(
+        point["optimized_risk_percent"] <= point["even_risk_percent"] for point in curve
+    )
+
+
+def test_recovery_restores_low_risk_after_cancellations():
+    d = dataset()["wake-nc"]
+    initial = solve(d)
+    first = d["locations"][0]["id"]
+    ids = sorted(
+        a["worker_id"]
+        for a in initial["assignments"]
+        if a["location_id"] == first and a["role"] == "Check-in"
+    )[:3]
+    for w in d["workers"]:
+        w["cancelled"] = w["id"] in ids
+    remaining = [a for a in initial["assignments"] if a["worker_id"] not in ids]
+    assert analytic_risk(d, remaining) == 100
+    revised = solve(d, locked=remaining)
+    assert analytic_risk(d, revised["assignments"]) == analytic_risk(
+        d, initial["assignments"]
+    )
+    assert revised["surge_assigned"] <= d["surge_budget"]
+
+
+def test_budget_api_requires_draft():
+    c = TestClient(app)
+    session = c.post("/api/sessions").json()
+    h = {"X-Demo-Session": session["session_id"]}
+    path = "/api/jurisdictions/dane-wi"
+    assert (
+        c.put(path + "/budget", json={"surge_budget": 21}, headers=h).status_code == 422
+    )
+    updated = c.put(path + "/budget", json={"surge_budget": 2}, headers=h).json()
+    assert updated["jurisdictions"][1]["surge_budget"] == 2
+    generated = c.post(path + "/generate", headers=h).json()["jurisdictions"][1]
+    assert generated["plan"]["surge_assigned"] <= 2
+    assert len(generated["curve"]) == 9
+    assert (
+        c.put(path + "/budget", json={"surge_budget": 3}, headers=h).status_code == 409
+    )

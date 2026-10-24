@@ -2,9 +2,9 @@
 
 **Coordinated Routing of Election Workers · Hack/OHIO 2026**
 
-> **Full AI assistance disclosure:** This prototype was designed, implemented, documented, and tested with substantial generative AI assistance through OpenAI Codex (Astra). AI assistance includes the Python backend, optimization and simulation implementation, React interface, synthetic data generator, tests, documentation, and demo preparation. The commit history records individual file changes; it is not evidence of unaided human authorship. Human review is necessary before use beyond this hackathon demonstration.
+> **Full AI assistance disclosure:** This prototype was designed, implemented, documented, and tested with substantial generative AI assistance through OpenAI Codex (Astra). AI assistance includes the Python backend, optimization and simulation implementation, React interface, synthetic data generator, tests, documentation, and demo preparation. The risk-aware staffing update (extra-staff budget, exact line-risk objective, trade-off chart) was made with Claude (Anthropic) assistance. The commit history records individual file changes; it is not evidence of unaided human authorship. Human review is necessary before use beyond this hackathon demonstration.
 
-PollCREW is a national, nonpartisan staffing prototype. Choose a synthetic jurisdiction, confirm a worker’s skills, generate an explainable assignment plan, simulate three cancellations, recover with backups while preserving unaffected approved assignments, and approve the revision.
+PollCREW is a national, nonpartisan staffing prototype. Choose a synthetic jurisdiction, confirm a worker’s skills, generate an explainable assignment plan that places a limited number of extra check-in workers where they cut long-line risk the most, simulate three cancellations, recover with backups while preserving unaffected approved assignments, and approve the revision.
 
 **All workers, locations, precinct associations, staffing requirements, and demand estimates are synthetic. There is no nationwide live-data coverage, legal certification, compliance determination, or real-world election deployment. No party affiliation is collected.** Real jurisdiction names provide familiar geographic context only.
 
@@ -51,7 +51,7 @@ Environment examples are in `.env.example`. Variables must be exported into the 
 
 ## Data and operational requirements
 
-Seed 2026 produces 150 workers: 50 each in Wake County, North Carolina; Dane County, Wisconsin; and Maricopa County, Arizona. Each jurisdiction has four physical locations, each associated with two distinct precinct IDs. Wake locations request four check-in workers, two voter-support workers, and one site lead (28 total). Dane requests one voter-support worker per site (24 total). Maricopa requests five check-in workers per site (32 total), and its Central Library support role additionally requires confirmed Spanish assistance. Remaining eligible workers are available as backups. These are synthetic operational choices, not jurisdictional rules.
+Seed 2026 produces 150 workers: 50 each in Wake County, North Carolina; Dane County, Wisconsin; and Maricopa County, Arizona. Each jurisdiction has four physical locations, each associated with two distinct precinct IDs. Wake locations request four check-in workers, two voter-support workers, and one site lead (28 total). Dane requests one voter-support worker per site (24 total). Maricopa requests five check-in workers per site (32 total), and its Central Library support role additionally requires confirmed Spanish assistance. Each jurisdiction also has an **extra check-in staff budget** of six workers beyond the desired counts, editable on the Requirements tab before generating a plan. Remaining eligible workers are available as backups. These are synthetic operational choices, not jurisdictional rules.
 
 Workers have confirmed skills, explicit availability, training status, a travel limit, and an attendance assumption. Some are intentionally unavailable for the full shift or untrained. Coordinators can edit minimum and desired counts, required skills, training requirements, shift hours, and queue assumptions before generating a plan. Profiles also expose availability, training, and travel limits. Generated plans freeze these inputs; reset before changing them.
 
@@ -66,7 +66,9 @@ uv run python export_demo.py > demo-data.json
 
 ## Optimization and recovery
 
-The solver enforces one assignment per worker, full-shift availability, training where required, all required confirmed skills, travel limits, and configured role minimums and maximum desired counts. It first maximizes filled desired positions, then match quality. Quality combines 70% confirmed-skill contextual similarity and 30% travel proximity. The solver uses one search worker, seed 2026, and a ten-second limit. A feasible result need not be proven optimal; the returned status distinguishes these cases.
+The solver enforces one assignment per worker, full-shift availability, training where required, all required confirmed skills, travel limits, configured role minimums, desired counts for voter support and site leads, and the extra check-in staff budget. Its objective is lexicographic through weights: first fill desired positions, then **minimize the chance that any site's modeled wait exceeds 30 minutes**, then avoid extra workers that do not reduce that risk, then maximize match quality. Quality combines 70% confirmed-skill contextual similarity and 30% travel proximity.
+
+For each site and each possible check-in count, the solver precomputes the exact probability of a long line: a Poisson-binomial distribution over which assigned workers attend, combined with the M/M/c expected wait. CP-SAT chooses one count per site, so the cost of `-log(1 - risk)` summed across sites is minimized; with independent sites that is exactly the chance that at least one site has a long line. The 5,000-run Monte Carlo below checks the same figure independently. The solver uses one search worker, seed 2026, and a ten-second limit. A feasible result need not be proven optimal; the returned status distinguishes these cases.
 
 Infeasible requests return actionable errors and do not overwrite the previous plan. An unreachable desired count can produce an explicitly reported gap if all hard minimums remain satisfied. No minimum is silently relaxed.
 
@@ -78,11 +80,21 @@ Sessions are isolated by a random ID stored in browser session storage, kept in 
 
 Every evaluated plan runs **5,000 seeded no-show scenarios**. Each worker independently attends with probability 0.92; a shared worker-by-scenario attendance matrix is generated in stable order for comparisons. Only attending workers assigned to **Check-in** count as service stations.
 
-The queue model is M/M/c: constant Poisson arrivals, independent exponential service times, and a steady-state expected wait. Mean service time defaults to 2.5 minutes. Wake arrival rates are 74/77/80/83 per hour; Dane 66/69/72/75; Maricopa 86/89/92/95. Configurable values are used directly. Zero check-in staff with positive arrivals and arrival rates greater than or equal to service capacity are unstable with infinite modeled wait. JSON uses `null` for an all-attend wait with no finite steady-state value; the UI explains it. Zero demand yields zero expected wait.
+The queue model is M/M/c: constant Poisson arrivals, independent exponential service times, and a steady-state expected wait. Mean service time defaults to 2.5 minutes. Wake arrival rates are 64/70/78/86 per hour; Dane 66/69/72/75; Maricopa 86/89/92/95. Configurable values are used directly. Zero check-in staff with positive arrivals and arrival rates greater than or equal to service capacity are unstable with infinite modeled wait. JSON uses `null` for an all-attend wait with no finite steady-state value; the UI explains it. Zero demand yields zero expected wait.
 
-The headline metric is **the percentage of no-show scenarios with modeled expected wait over 30 minutes at any location**, including unstable queues. Site cards show the corresponding site-level metric, unstable-scenario share, zero-staff share, and expected wait if all assigned workers attend. This is **not an individual voter’s probability of waiting more than 30 minutes**. It is not a finite-day simulation, and it omits breaks, changing arrival patterns, correlated no-shows, and empirical calibration. High risks are reported honestly; no risk targets are hardcoded.
+The headline metric is **the percentage of no-show scenarios with modeled expected wait over 30 minutes at any location**, including unstable queues. Every simulation also reports the exact analytic value of the same quantity; the two agree within sampling error. Site cards show the corresponding site-level metric, unstable-scenario share, zero-staff share, and expected wait if all assigned workers attend. This is **not an individual voter’s probability of waiting more than 30 minutes**. It is not a finite-day simulation, and it omits breaks, changing arrival patterns, correlated no-shows, and empirical calibration. High risks are reported honestly; no risk targets are hardcoded.
 
-The baseline is a genuine greedy assignment: visit locations and roles in fixed order, fill hard minimums before desired positions, and take the highest-scoring remaining eligible worker each time. Both methods use identical data, scores, eligibility rules, and simulation seeds. The greedy method can fail hard minimums because it does not globally reserve scarce skills; the dashboard explicitly reports that outcome. Coverage, mean match score, runtime, and queue risk are measured. Recovery applies identical cancelled worker IDs to both plans and preserves each plan’s unaffected assignments; affected counts can differ and are displayed.
+The baseline is a genuine greedy assignment: visit locations and roles in fixed order, fill hard minimums before desired positions, then hand out the same extra check-in budget one worker per location in turn, taking the highest-scoring remaining eligible worker each time. Both methods use identical data, scores, eligibility rules, budgets, and simulation seeds. The Evaluation tab also plots risk against the extra-staff budget (0 to 8) for both methods. The greedy method can fail hard minimums because it does not globally reserve scarce skills; the dashboard explicitly reports that outcome. Coverage, mean match score, runtime, and queue risk are measured. Recovery applies identical cancelled worker IDs to both plans and preserves each plan’s unaffected assignments; affected counts can differ and are displayed.
+
+Measured results in `docs/benchmark-results.json` (offline matching mode, seed 2026, exact risk):
+
+| Jurisdiction | No extra staff | Even spread of 6 extra | PollCREW with 6 extra |
+| --- | --- | --- | --- |
+| Wake County | 52.2% | 10.7% | 2.6% |
+| Dane County | 52.2% | 10.7% | 2.6% |
+| Maricopa County | 44.3% | 8.7% | 2.8% |
+
+After three check-in cancellations at one site, recovery with the remaining budget keeps PollCREW at 2.2–2.9% (Monte Carlo) versus 9.4–11.4% for the even-spread baseline.
 
 Run reproducible comparisons:
 
@@ -105,15 +117,13 @@ npx playwright install chromium
 npm test
 ```
 
-Start the backend before running browser tests. The browser suite starts the frontend production server if needed. Tests cover constraints, rejected-skill exclusion, cancellations, locked assignments, insufficient backups, repeatable simulations, stale approvals, session isolation, reset, worker confirmation, assignment review, and mobile requirements validation. See `docs/verification.md` for the actual checks completed and environmental limitations.
+Start the backend before running browser tests. The browser suite starts the frontend production server if needed. Tests cover constraints, rejected-skill exclusion, cancellations, locked assignments, insufficient backups, repeatable simulations, exact-versus-Monte-Carlo risk agreement, budget limits, risk-aware allocation beating even spread in every jurisdiction, recovery restoring low risk, stale approvals, session isolation, reset, worker confirmation, assignment review, budget editing, and mobile requirements validation. See `docs/verification.md` for the actual checks completed and environmental limitations.
 
 Code is intentionally free of explanatory comments; design explanations live here and in documentation. Build-generated files may contain framework-generated notices and are excluded from Git.
 
 ## Demo and delivery
 
-Follow `docs/demo-script.md` for a presentation under three minutes. The repository remains private. Public deployment, permission changes, and hackathon submission require the owner’s approval. No submission or public deployment is part of this local prototype.
-
-The request referred to an attached PDF, but only the detailed pasted instructions were available during this implementation. Those instructions are the implemented specification. Additional PDF comparisons have not been claimed or fabricated.
+Follow `docs/demo-script.md` for a presentation under three minutes. This is a local prototype; no public deployment is part of the project.
 
 ## Map attribution
 

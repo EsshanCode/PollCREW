@@ -45,11 +45,13 @@ export type Simulation = {
   seed: number;
   metric: string;
   risk_percent: number;
+  analytic_risk_percent: number;
   locations: {
     id: string;
     name: string;
     check_in_workers: number;
     risk_percent: number;
+    analytic_risk_percent: number;
     unstable_percent: number;
     zero_staff_percent: number;
     all_attend_expected_wait_minutes: number | null;
@@ -59,6 +61,8 @@ export type Plan = {
   assignments: Assignment[];
   coverage: number;
   needed: number;
+  surge_budget: number;
+  surge_assigned: number;
   match_quality: number;
   preparation_ms: number;
   runtime_ms: number;
@@ -75,6 +79,13 @@ export type Plan = {
     minimum_shortfall: number;
   }[];
 };
+export type CurvePoint = {
+  budget: number;
+  optimized_risk_percent: number;
+  even_risk_percent: number;
+  optimized_surge: number;
+  even_surge: number;
+};
 export type Jurisdiction = {
   jurisdiction: {
     id: string;
@@ -86,6 +97,8 @@ export type Jurisdiction = {
   };
   locations: Location[];
   workers: Worker[];
+  surge_budget: number;
+  curve: CurvePoint[] | null;
   plan: Plan | null;
   baseline: Plan | null;
   before: Plan | null;

@@ -8,7 +8,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
 from data import SKILLS, dataset
-from engine import PlanError, evaluate, solve, simulate
+from engine import PlanError, budget_curve, coverage_stats, evaluate, solve, simulate
 from extraction import extract
 
 app = FastAPI(title="PollCREW synthetic demo", version="0.1.0")
@@ -74,6 +74,10 @@ class LocationUpdate(BaseModel):
         ):
             raise ValueError("Provide all three distinct roles and an end after start")
         return self
+
+
+class BudgetUpdate(BaseModel):
+    surge_budget: int = Field(ge=0, le=20)
 
 
 class Approval(BaseModel):
@@ -185,6 +189,15 @@ def update_location(jid: str, lid: str, body: LocationUpdate, x_demo_session: Se
         return snapshot(x_demo_session)
 
 
+@app.put("/api/jurisdictions/{jid}/budget")
+def update_budget(jid: str, body: BudgetUpdate, x_demo_session: Session):
+    with mutex:
+        data = state(x_demo_session, jid)
+        require_draft(data)
+        data["surge_budget"] = body.surge_budget
+        return snapshot(x_demo_session)
+
+
 @app.post("/api/jurisdictions/{jid}/generate")
 def generate(jid: str, x_demo_session: Session):
     with mutex:
@@ -192,7 +205,10 @@ def generate(jid: str, x_demo_session: Session):
         require_draft(data)
         plan = evaluate(data, solve(data))
         baseline = evaluate(data, solve(data, baseline=True))
-        data.update(plan=plan, baseline=baseline, revision=data["revision"] + 1)
+        curve = budget_curve(data, max(8, data["surge_budget"]))
+        data.update(
+            plan=plan, baseline=baseline, curve=curve, revision=data["revision"] + 1
+        )
         data["events"].append("Initial plan generated; ready for coordinator review.")
         return snapshot(x_demo_session)
 
@@ -241,7 +257,8 @@ def cancel(jid: str, x_demo_session: Session):
         data["plan"].update(
             approved=False,
             disrupted=True,
-            coverage=len(remaining) / before["needed"],
+            coverage=coverage_stats(data, remaining)["filled"] / before["needed"],
+            surge_assigned=coverage_stats(data, remaining)["surge_assigned"],
             simulation=simulate(data, remaining),
         )
         data["plan"]["gaps"] = []

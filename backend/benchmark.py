@@ -2,7 +2,7 @@ import copy
 import json
 import os
 from data import dataset
-from engine import contextual_quality, evaluate, solve
+from engine import analytic_risk, budget_curve, contextual_quality, evaluate, solve
 
 
 def benchmark():
@@ -11,6 +11,7 @@ def benchmark():
     for jid, data in dataset().items():
         optimized = evaluate(data, solve(data))
         baseline = evaluate(data, solve(data, baseline=True))
+        flat = solve(data, budget=0)
         ids = [
             a["worker_id"]
             for a in sorted(
@@ -43,6 +44,7 @@ def benchmark():
                     k: optimized[k]
                     for k in [
                         "coverage",
+                        "surge_assigned",
                         "match_quality",
                         "runtime_ms",
                         "preparation_ms",
@@ -54,6 +56,7 @@ def benchmark():
                     k: baseline[k]
                     for k in [
                         "coverage",
+                        "surge_assigned",
                         "match_quality",
                         "runtime_ms",
                         "preparation_ms",
@@ -62,6 +65,9 @@ def benchmark():
                     ]
                 },
                 "recovery": recoveries,
+                "surge_budget": data["surge_budget"],
+                "flat_staffing_risk_percent": analytic_risk(data, flat["assignments"]),
+                "budget_curve": budget_curve(data, 8),
             }
         )
     return {

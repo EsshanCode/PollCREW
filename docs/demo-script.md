@@ -18,19 +18,19 @@ Open Workers and select Jordan Rivera. Enter: “I helped with registration and 
 
 Click Generate assignments. Open Assignments.
 
-“CP-SAT builds the plan from confirmed skills, full-shift availability, training, travel limits, and coordinator-defined staffing requirements. Each assignment explains the match. The LLM does not assign anyone.”
+“CP-SAT builds the plan from confirmed skills, full-shift availability, training, travel limits, and coordinator-defined staffing requirements. Wake can deploy six extra check-in workers; the solver puts them where they cut long-line risk the most. Each assignment explains the match. The LLM does not assign anyone.”
 
 Approve the plan. Open Overview.
 
 **1:20–1:40 · Risk and baseline**
 
-“Queue risk comes from 5,000 seeded no-show scenarios and attending check-in workers. This percentage counts scenarios with modeled expected waits over thirty minutes; it is not an individual voter’s wait probability. High risks stay visible.”
+“Queue risk comes from 5,000 seeded no-show scenarios, checked against an exact calculation. With no extra staff, there’s a 52% chance some Wake site has a modeled wait over thirty minutes. Spreading six extra workers evenly gets that to about 11%. PollCREW places the same six and gets it to under 3%.”
 
-Briefly open Evaluation. Point to measured coverage, match quality, runtime, and the genuine greedy baseline. Do not promise an improvement if the displayed comparison does not show one.
+Open Evaluation. Point to the trade-off chart and the exact line-risk row. It is not an individual voter’s wait probability.
 
 **1:40–2:15 · Cancellation recovery**
 
-Click Simulate 3 cancellations. Show 25 preserved assignments and the changed risk. Click Recover with backups. Show three replacements and all 25 unaffected assignments preserved.
+Click Simulate 3 cancellations. Show 31 preserved assignments and risk jumping to 100%: one site no longer has enough check-in capacity. Click Recover with backups. Show three replacements, all 31 unaffected assignments preserved, and risk back near 2%.
 
 “Three workers cancel. They stay unavailable. We re-solve with backups and lock every unaffected approved assignment. If the requirements cannot be met, the app returns an actionable error instead of breaking constraints.”
 

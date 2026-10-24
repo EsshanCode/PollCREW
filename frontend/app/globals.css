@@ -949,6 +949,38 @@ td small {
     transform: rotate(360deg);
   }
 }
+.budget-editor {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  margin: 16px 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f6f9f7;
+}
+.budget-editor > div {
+  flex: 1 1 260px;
+}
+.budget-editor h3 {
+  margin: 0 0 4px;
+}
+.budget-editor label {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.budget-editor input {
+  width: 110px;
+}
+.tradeoff {
+  margin: 8px 0 22px;
+}
+.tradeoff h3 {
+  margin: 0 0 6px;
+}
 @media (min-width: 1500px) {
   .map {
     height: 370px;

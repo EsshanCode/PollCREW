@@ -17,6 +17,8 @@ JURISDICTIONS = [
         "lat": 35.7796,
         "lon": -78.6382,
         "arrival": 74,
+        "arrival_offsets": [-10, -4, 4, 12],
+        "surge_budget": 6,
     },
     {
         "id": "dane-wi",
@@ -26,6 +28,7 @@ JURISDICTIONS = [
         "lat": 43.0731,
         "lon": -89.4012,
         "arrival": 66,
+        "surge_budget": 6,
     },
     {
         "id": "maricopa-az",
@@ -35,6 +38,7 @@ JURISDICTIONS = [
         "lat": 33.4484,
         "lon": -112.074,
         "arrival": 86,
+        "surge_budget": 6,
     },
 ]
 
@@ -75,7 +79,8 @@ def dataset(seed=2026):
                         f"{j['code']}-{i * 2 + 1:03}",
                         f"{j['code']}-{i * 2 + 2:03}",
                     ],
-                    "arrival_per_hour": j["arrival"] + i * 3,
+                    "arrival_per_hour": j["arrival"]
+                    + j.get("arrival_offsets", [0, 3, 6, 9])[i],
                     "service_minutes": 2.5,
                     "start": 6,
                     "end": 20,
@@ -91,9 +96,11 @@ def dataset(seed=2026):
                             "role": "Voter support",
                             "desired": 1 if j["code"] == "WI" else 2,
                             "minimum": 1,
-                            "skills": ["accessibility", "spanish"]
-                            if j["code"] == "AZ" and i == 0
-                            else ["accessibility"],
+                            "skills": (
+                                ["accessibility", "spanish"]
+                                if j["code"] == "AZ" and i == 0
+                                else ["accessibility"]
+                            ),
                             "training": True,
                         },
                         {
@@ -136,8 +143,10 @@ def dataset(seed=2026):
             "jurisdiction": j,
             "locations": locations,
             "workers": workers,
+            "surge_budget": j["surge_budget"],
             "plan": None,
             "baseline": None,
+            "curve": None,
             "before": None,
             "impact": None,
             "revision": 0,

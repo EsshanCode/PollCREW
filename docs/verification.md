@@ -19,3 +19,12 @@ Live OpenAI extraction was not called because no API key was supplied. Its evide
 No multi-user authentication, durable database, deployment, empirical queue calibration, legal assessment, or production load test was performed. Data and sessions are intentionally synthetic and ephemeral. No claim is made that simulated wait metrics predict a real election.
 
 The PDF mentioned in the request was unavailable. Only the pasted detailed specification was implemented; no additional PDF benchmarks are claimed.
+
+## Risk-aware staffing update
+
+Checked on October 24, 2026, on Linux with Python 3.13, Node 22, OR-Tools CP-SAT and the bundled Chromium, in offline matching and extraction modes:
+
+- Backend: 22 passing tests, including exact-versus-Monte-Carlo risk agreement (within 1.5 points), the extra-staff budget, risk-aware allocation beating even spread in all three jurisdictions, recovery restoring pre-cancellation risk, and the budget API.
+- Frontend: strict TypeScript check and production build.
+- Browser: both Playwright tests pass, including budget editing and the trade-off chart rendering on the Evaluation tab.
+- `benchmark-results.json` was regenerated in offline matching mode; contextual (sentence-transformers) matching was not re-run for this update.

@@ -27,6 +27,10 @@ const RiskChart = dynamic(() => import("@/components/RiskChart"), {
   ssr: false,
   loading: () => <p>Loading risk chart…</p>,
 });
+const TradeoffChart = dynamic(() => import("@/components/TradeoffChart"), {
+  ssr: false,
+  loading: () => <p>Loading trade-off chart…</p>,
+});
 export default function Home() {
   const [data, setData] = useState<AppState | null>(null);
   const [sid, setSid] = useState("");
@@ -38,6 +42,7 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [formEpoch, setFormEpoch] = useState(0);
   const [filter, setFilter] = useState("");
+  const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
   const select = useCallback((id: string) => {
     setSelected(id);
     setTab("Overview");
@@ -458,7 +463,7 @@ export default function Home() {
                       label="Staffing coverage"
                       detail={
                         plan
-                          ? `${plan.assignments.length} of ${plan.needed} desired positions`
+                          ? `${Math.round(plan.coverage * plan.needed)} of ${plan.needed} desired positions · +${plan.surge_assigned} surge check-in`
                           : "Generate a plan to measure"
                       }
                     />
@@ -466,7 +471,11 @@ export default function Home() {
                       icon={<BarChart3 />}
                       value={plan ? `${plan.simulation.risk_percent}%` : "—"}
                       label="Modeled queue risk"
-                      detail="Scenarios with expected wait >30 min"
+                      detail={
+                        plan
+                          ? `Chance any site waits >30 min · exact check ${plan.simulation.analytic_risk_percent}%`
+                          : "Chance any site waits >30 min"
+                      }
                     />
                     <Stat
                       icon={<ShieldCheck />}
@@ -677,7 +686,11 @@ export default function Home() {
                               <div className="section-heading">
                                 <MapPin size={20} />
                                 <span className="pill">
-                                  {assigned.length}/{need} staffed
+                                  {Math.min(assigned.length, need)}/{need}{" "}
+                                  staffed
+                                  {assigned.length > need
+                                    ? ` · +${assigned.length - need} surge`
+                                    : ""}
                                 </span>
                               </div>
                               <h3>{loc.name}</h3>
@@ -687,7 +700,7 @@ export default function Home() {
                               <div className="progress">
                                 <span
                                   style={{
-                                    width: `${need ? (assigned.length / need) * 100 : 100}%`,
+                                    width: `${need ? Math.min(100, (assigned.length / need) * 100) : 100}%`,
                                   }}
                                 />
                               </div>
@@ -861,6 +874,51 @@ export default function Home() {
                         counts are hard constraints; desired counts are
                         optimization targets.
                       </p>
+                      <div className="budget-editor">
+                        <div>
+                          <h3>Extra check-in staff budget</h3>
+                          <p className="small">
+                            How many workers beyond the desired counts the
+                            county can deploy. PollCREW places them where they
+                            cut line risk the most.
+                          </p>
+                        </div>
+                        <label>
+                          Extra workers
+                          <input
+                            type="number"
+                            min={0}
+                            max={20}
+                            aria-label="Extra check-in staff budget"
+                            disabled={!!plan || !!busy}
+                            value={budgetDraft ?? String(current.surge_budget)}
+                            onChange={(e) => setBudgetDraft(e.target.value)}
+                          />
+                        </label>
+                        <button
+                          className="secondary"
+                          disabled={!!plan || !!busy || budgetDraft === null}
+                          onClick={async () => {
+                            setError("");
+                            setNotice("");
+                            try {
+                              setData(
+                                await request(
+                                  `/jurisdictions/${selected}/budget`,
+                                  "PUT",
+                                  { surge_budget: Number(budgetDraft) },
+                                ),
+                              );
+                              setBudgetDraft(null);
+                              setNotice("Budget saved.");
+                            } catch (e) {
+                              setError((e as Error).message);
+                            }
+                          }}
+                        >
+                          Save budget
+                        </button>
+                      </div>
                       {current.locations.map((loc) => (
                         <LocationEditor
                           key={`${formEpoch}-${selected}-${loc.id}`}
@@ -885,10 +943,27 @@ export default function Home() {
                       <h2>Measured against a simple baseline</h2>
                       <p>
                         Same workers, requirements, eligibility checks, quality
-                        score, attendance seed, and 5,000 simulation runs.
+                        score, attendance seed, extra-staff budget, and 5,000
+                        simulation runs.
                       </p>
                       {plan && current.baseline ? (
                         <>
+                          {current.curve && (
+                            <div className="tradeoff">
+                              <h3>Same budget, smarter placement</h3>
+                              <TradeoffChart
+                                curve={current.curve}
+                                budget={(current.before ?? plan).surge_budget}
+                              />
+                              <p className="small">
+                                Each point re-solves the plan with that many
+                                extra check-in workers. Risk is the exact chance
+                                any site&apos;s modeled wait exceeds 30 minutes.
+                                Even spread hands the same extra workers out
+                                location by location.
+                              </p>
+                            </div>
+                          )}
                           <div className="table-wrap">
                             <table>
                               <thead>
@@ -899,7 +974,7 @@ export default function Home() {
                                       ? "Initial optimized plan"
                                       : "Optimized plan"}
                                   </th>
-                                  <th>Greedy baseline</th>
+                                  <th>Greedy baseline, even spread</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -953,6 +1028,34 @@ export default function Home() {
                                   </td>
                                 </tr>
                                 <tr>
+                                  <td>Extra check-in workers used</td>
+                                  <td>
+                                    {(current.before ?? plan).surge_assigned} of{" "}
+                                    {(current.before ?? plan).surge_budget}
+                                  </td>
+                                  <td>
+                                    {current.baseline.surge_assigned} of{" "}
+                                    {current.baseline.surge_budget}
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>Exact line risk</td>
+                                  <td>
+                                    {
+                                      (current.before ?? plan).simulation
+                                        .analytic_risk_percent
+                                    }
+                                    %
+                                  </td>
+                                  <td>
+                                    {
+                                      current.baseline.simulation
+                                        .analytic_risk_percent
+                                    }
+                                    %
+                                  </td>
+                                </tr>
+                                <tr>
                                   <td>Queue-risk scenarios</td>
                                   <td>
                                     {
@@ -992,11 +1095,12 @@ export default function Home() {
                           </div>
                           <p className="small">
                             Baseline: process locations and roles in fixed
-                            order, fill minimums first, then desired counts;
-                            choose the highest-scoring remaining eligible worker
-                            at each step. It can fail a minimum because it does
-                            not globally reserve scarce skills. No baseline is
-                            deliberately weakened.
+                            order, fill minimums first, then desired counts,
+                            then hand out the extra-staff budget one worker per
+                            location in turn; choose the highest-scoring
+                            remaining eligible worker at each step. It can fail
+                            a minimum because it does not globally reserve
+                            scarce skills. No baseline is deliberately weakened.
                           </p>
                           <p className="small">
                             Recovery applies the same cancelled worker IDs to
@@ -1026,6 +1130,15 @@ export default function Home() {
                           capacity are explicitly unstable (infinite modeled
                           wait). No finite-day queue buildup, correlated
                           no-shows, breaks, or empirical calibration is modeled.
+                        </p>
+                        <p>
+                          The optimizer uses the exact probability of a long
+                          line for each possible check-in count (a
+                          Poisson-binomial over attendance combined with the
+                          M/M/c wait), and minimizes the chance that any site
+                          exceeds 30 minutes within the extra-staff budget. The
+                          5,000-run Monte Carlo independently checks that
+                          figure.
                         </p>
                         <p>
                           Matching mode:{" "}

@@ -57,13 +57,13 @@ test("complete worker confirmation, assignment, cancellation, recovery, approval
     page.getByRole("button", { name: "Approve plan", exact: true }),
   ).toBeVisible({ timeout: 60000 });
   await page.getByRole("button", { name: "Assignments", exact: true }).click();
-  await expect(page.locator("tbody tr")).toHaveCount(28);
+  await expect(page.locator("tbody tr")).toHaveCount(34);
   await page.getByRole("button", { name: "Approve plan", exact: true }).click();
   await page.getByRole("button", { name: "Simulate 3 cancellations" }).click();
   await expect(
-    page.getByText("25 assignments preserved", { exact: true }),
+    page.getByText("31 assignments preserved", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator("tbody tr")).toHaveCount(25);
+  await expect(page.locator("tbody tr")).toHaveCount(31);
   const locked = await page.locator("tbody tr").allTextContents();
   await page
     .getByRole("button", { name: "Recover with backups", exact: true })
@@ -71,7 +71,7 @@ test("complete worker confirmation, assignment, cancellation, recovery, approval
   await expect(
     page.getByRole("button", { name: "Approve revised plan", exact: true }),
   ).toBeVisible({ timeout: 60000 });
-  await expect(page.locator("tbody tr")).toHaveCount(28);
+  await expect(page.locator("tbody tr")).toHaveCount(34);
   const recovered = await page.locator("tbody tr").allTextContents();
   expect(locked.every((row) => recovered.includes(row))).toBeTruthy();
   await page
@@ -87,6 +87,16 @@ test("complete worker confirmation, assignment, cancellation, recovery, approval
   await expect(
     page.getByRole("cell", { name: "3 / 3 affected" }).first(),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Same budget, smarter placement" }),
+  ).toBeVisible();
+  await expect(page.locator(".tradeoff .main-svg").first()).toBeVisible({
+    timeout: 15000,
+  });
+  await page.screenshot({
+    path: "test-results/evaluation.png",
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "Reset demo" }).click();
   await expect(
     page.getByRole("button", { name: "Generate assignments", exact: true }),
@@ -101,6 +111,9 @@ test("mobile overview and requirements validation", async ({ page }) => {
     .getByRole("button", { name: /NC North Carolina Wake County/ })
     .click();
   await page.getByRole("button", { name: "Requirements", exact: true }).click();
+  await page.getByLabel("Extra check-in staff budget").fill("4");
+  await page.getByRole("button", { name: "Save budget" }).click();
+  await expect(page.getByText("Budget saved.")).toBeVisible();
   await page.getByText("Configure Central Library", { exact: true }).click();
   await page.getByLabel("Required minimum", { exact: true }).first().fill("20");
   await page.getByRole("button", { name: "Save requirements" }).first().click();
