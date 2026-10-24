@@ -1,0 +1,7 @@
+# Slim install for cloud hosting (no sentence-transformers / torch).
+# Run with EMBEDDING_MODE=offline and EXTRACTION_MODE=offline (or openai).
+fastapi>=0.115,<1
+uvicorn>=0.34,<1
+ortools>=9.12,<10
+numpy>=2,<3
+httpx>=0.28,<1

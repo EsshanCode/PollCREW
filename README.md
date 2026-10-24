@@ -40,6 +40,16 @@ uv run python -c 'from engine import contextual_quality; print(contextual_qualit
 
 For an entirely offline calculation demo, start the backend with `EMBEDDING_MODE=offline`. This uses explicitly labeled exact-skill overlap instead of embeddings. Download dependencies and the model beforehand for contextual matching without network access. The national map uses bundled state boundaries; local street tiles require Internet access. The site list and assignment engine do not depend on tile availability.
 
+## Deploy (Render + Vercel)
+
+The API keeps demo sessions in memory, so it runs as one always-on process on Render; the Next.js site runs on Vercel and proxies `/api` to it.
+
+1. **API on Render:** New → Blueprint → pick this repo. `render.yaml` builds `backend/` with the slim `requirements-cloud.txt` (no sentence-transformers or torch) and runs offline matching. Add `GOOGLE_CIVIC_API_KEY` when prompted (optional). Copy the service URL, for example `https://pollcrew-api.onrender.com`.
+2. **Site on Vercel:** Add New → Project → import this repo, set **Root Directory** to `frontend`, and add the environment variable `BACKEND_URL` set to the Render URL. Deploy.
+3. Every push to `main` redeploys both.
+
+The free Render plan sleeps after 15 minutes idle and takes about a minute to wake; open the site a few minutes before presenting. The site keeps retrying until the API is awake.
+
 ## Poll worker view
 
 Open <http://127.0.0.1:3000/worker>, or use **Poll worker view** in the coordinator sidebar so both views share one demo session. It is built for poll workers of every background, most of whom are 61 or older:

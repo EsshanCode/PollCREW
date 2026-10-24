@@ -1,0 +1,19 @@
+# Render blueprint for the PollCREW API (one always-on process keeps demo sessions in memory).
+services:
+  - type: web
+    name: pollcrew-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements-cloud.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: EMBEDDING_MODE
+        value: offline
+      - key: EXTRACTION_MODE
+        value: offline
+      - key: GOOGLE_CIVIC_API_KEY
+        sync: false
