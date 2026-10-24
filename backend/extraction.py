@@ -5,16 +5,65 @@ import httpx
 from data import SKILLS
 
 KEYWORDS = {
-    "check_in": ["check-in", "check in", "data entry", "registration"],
+    "check_in": [
+        "check-in",
+        "check in",
+        "checked in",
+        "data entry",
+        "registration",
+        "front desk",
+        "reception",
+        "cashier",
+        "sign-in",
+        "sign in",
+        "registro",
+        "recepción",
+        "recepcion",
+        "cajer",
+    ],
     "accessibility": [
         "accessibility",
         "wheelchair",
         "disabilities",
-        "patient communication",
+        "disability",
+        "patient",
+        "caregiver",
+        "nurse",
+        "nursing",
+        "elderly",
+        "discapacidad",
+        "silla de ruedas",
+        "paciente",
+        "enfermer",
+        "cuidad",
     ],
-    "equipment": ["printer", "tablet", "troubleshoot"],
-    "leadership": ["led a team", "supervised", "coordinated", "shift lead"],
-    "spanish": ["spanish"],
+    "equipment": [
+        "printer",
+        "tablet",
+        "troubleshoot",
+        "computer",
+        "tech support",
+        "it support",
+        "impresora",
+        "tableta",
+        "computadora",
+    ],
+    "leadership": [
+        "led a team",
+        "supervised",
+        "coordinated",
+        "shift lead",
+        "manager",
+        "supervisor",
+        "team lead",
+        "coach",
+        "dirigí",
+        "supervisé",
+        "coordiné",
+        "líder",
+        "gerente",
+    ],
+    "spanish": ["spanish", "español", "espanol", "bilingual", "bilingüe"],
 }
 
 
@@ -24,7 +73,7 @@ def extract(text):
         suggestions = []
         for sentence in re.split(r"(?<=[.!?])\s+|\n", text):
             if re.search(
-                r"\b(no|not|never|without|cannot|can't|haven't|don't)\b",
+                r"\b(no|not|never|without|cannot|can't|haven't|don't|nunca|sin)\b",
                 sentence.lower(),
             ):
                 continue

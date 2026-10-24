@@ -43,23 +43,101 @@ JURISDICTIONS = [
 ]
 
 
+FIRST_NAMES = [
+    "Alex",
+    "Jordan",
+    "Morgan",
+    "Sam",
+    "Taylor",
+    "Casey",
+    "Avery",
+    "Riley",
+    "Jamie",
+    "Drew",
+]
+LAST_NAMES = ["Rivera", "Chen", "Patel", "Brooks", "Reed"]
+
+
+def standard_requirements(code="", index=0):
+    return [
+        {
+            "role": "Check-in",
+            "desired": 5 if code == "AZ" else 4,
+            "minimum": 2,
+            "skills": ["check_in"],
+            "training": True,
+        },
+        {
+            "role": "Voter support",
+            "desired": 1 if code == "WI" else 2,
+            "minimum": 1,
+            "skills": (
+                ["accessibility", "spanish"]
+                if code == "AZ" and index == 0
+                else ["accessibility"]
+            ),
+            "training": True,
+        },
+        {
+            "role": "Site lead",
+            "desired": 1,
+            "minimum": 1,
+            "skills": ["leadership", "equipment"],
+            "training": True,
+        },
+    ]
+
+
+def synthetic_workers(code, lat, lon, rng, count=50, spread=(0.065, 0.08)):
+    workers = []
+    for i in range(count):
+        skills = ["check_in", "accessibility"]
+        if i % 3 == 0:
+            skills += ["leadership", "equipment"]
+        if i % 4 == 0:
+            skills += ["spanish"]
+        if i % 7 == 0:
+            skills = ["accessibility"]
+        workers.append(
+            {
+                "id": f"{code}-{i + 1:03}",
+                "name": FIRST_NAMES[i % 10] + " " + LAST_NAMES[(i // 10) % 5],
+                "lat": lat + rng.uniform(-spread[0], spread[0]),
+                "lon": lon + rng.uniform(-spread[1], spread[1]),
+                "confirmed_skills": skills,
+                "rejected_skills": [],
+                "experience": "",
+                "trained": i % 13 != 0,
+                "available_start": 6,
+                "available_end": 20 if i % 17 else 12,
+                "max_travel_km": 30,
+                "attendance_probability": 0.92,
+                "cancelled": False,
+            }
+        )
+    return workers
+
+
+def jurisdiction_state(jurisdiction, locations, workers, surge_budget):
+    return {
+        "jurisdiction": jurisdiction,
+        "locations": locations,
+        "workers": workers,
+        "surge_budget": surge_budget,
+        "plan": None,
+        "baseline": None,
+        "curve": None,
+        "before": None,
+        "impact": None,
+        "revision": 0,
+        "events": [],
+    }
+
+
 def dataset(seed=2026):
     rng = random.Random(seed)
     result = {}
-    first = [
-        "Alex",
-        "Jordan",
-        "Morgan",
-        "Sam",
-        "Taylor",
-        "Casey",
-        "Avery",
-        "Riley",
-        "Jamie",
-        "Drew",
-    ]
-    last = ["Rivera", "Chen", "Patel", "Brooks", "Reed"]
-    for ji, j in enumerate(JURISDICTIONS):
+    for j in JURISDICTIONS:
         locations = []
         for i, name in enumerate(
             [
@@ -84,74 +162,11 @@ def dataset(seed=2026):
                     "service_minutes": 2.5,
                     "start": 6,
                     "end": 20,
-                    "requirements": [
-                        {
-                            "role": "Check-in",
-                            "desired": 5 if j["code"] == "AZ" else 4,
-                            "minimum": 2,
-                            "skills": ["check_in"],
-                            "training": True,
-                        },
-                        {
-                            "role": "Voter support",
-                            "desired": 1 if j["code"] == "WI" else 2,
-                            "minimum": 1,
-                            "skills": (
-                                ["accessibility", "spanish"]
-                                if j["code"] == "AZ" and i == 0
-                                else ["accessibility"]
-                            ),
-                            "training": True,
-                        },
-                        {
-                            "role": "Site lead",
-                            "desired": 1,
-                            "minimum": 1,
-                            "skills": ["leadership", "equipment"],
-                            "training": True,
-                        },
-                    ],
+                    "requirements": standard_requirements(j["code"], i),
                 }
             )
-        workers = []
-        for i in range(50):
-            skills = ["check_in", "accessibility"]
-            if i % 3 == 0:
-                skills += ["leadership", "equipment"]
-            if i % 4 == 0:
-                skills += ["spanish"]
-            if i % 7 == 0:
-                skills = ["accessibility"]
-            workers.append(
-                {
-                    "id": f"{j['code']}-{i + 1:03}",
-                    "name": first[i % 10] + " " + last[i // 10],
-                    "lat": j["lat"] + rng.uniform(-0.065, 0.065),
-                    "lon": j["lon"] + rng.uniform(-0.08, 0.08),
-                    "confirmed_skills": skills,
-                    "rejected_skills": [],
-                    "experience": "",
-                    "trained": i % 13 != 0,
-                    "available_start": 6,
-                    "available_end": 20 if i % 17 else 12,
-                    "max_travel_km": 30,
-                    "attendance_probability": 0.92,
-                    "cancelled": False,
-                }
-            )
-        result[j["id"]] = {
-            "jurisdiction": j,
-            "locations": locations,
-            "workers": workers,
-            "surge_budget": j["surge_budget"],
-            "plan": None,
-            "baseline": None,
-            "curve": None,
-            "before": None,
-            "impact": None,
-            "revision": 0,
-            "events": [],
-        }
+        workers = synthetic_workers(j["code"], j["lat"], j["lon"], rng)
+        result[j["id"]] = jurisdiction_state(j, locations, workers, j["surge_budget"])
     return result
 
 

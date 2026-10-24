@@ -16,6 +16,10 @@ export type Location = {
   start: number;
   end: number;
   requirements: Requirement[];
+  address?: string;
+  polling_hours?: string;
+  official?: boolean;
+  sources?: string[];
 };
 export type Worker = {
   id: string;
@@ -94,6 +98,8 @@ export type Jurisdiction = {
     code: string;
     lat: number;
     lon: number;
+    source?: string;
+    real_locations?: boolean;
   };
   locations: Location[];
   workers: Worker[];
@@ -121,4 +127,12 @@ export type AppState = {
   skills: Record<string, string>;
   extraction_mode: string;
   matching_mode: string;
+  polling_api_configured: boolean;
+};
+export type Lookup = {
+  address: string;
+  status: "found" | "none" | "error";
+  found?: number;
+  election?: string;
+  detail: string;
 };

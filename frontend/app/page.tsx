@@ -19,6 +19,7 @@ import {
 import { AppState } from "@/components/types";
 import WorkerEditor from "@/components/WorkerEditor";
 import LocationEditor from "@/components/LocationEditor";
+import ImportPanel from "@/components/ImportPanel";
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => <div className="map loading">Loading map…</div>,
@@ -153,7 +154,14 @@ export default function Home() {
           <Globe2 size={19} />
           National overview
         </button>
-        <div className="workspace-label">DEMO JURISDICTIONS</div>
+        <a
+          className="nav"
+          href={`/worker${sid ? `?s=${sid}` : ""}${selected ? `${sid ? "&" : "?"}j=${selected}` : ""}`}
+        >
+          <Users size={19} />
+          Poll worker view
+        </a>
+        <div className="workspace-label">JURISDICTIONS</div>
         {data?.jurisdictions.map((j) => (
           <button
             key={j.jurisdiction.id}
@@ -205,7 +213,7 @@ export default function Home() {
             <div>
               <div className="eyebrow">
                 {current
-                  ? `${current.jurisdiction.state.toUpperCase()} · SYNTHETIC JURISDICTION`
+                  ? `${current.jurisdiction.state.toUpperCase()} · ${current.jurisdiction.real_locations ? "REAL POLLING PLACES · SYNTHETIC STAFF" : "SYNTHETIC JURISDICTION"}`
                   : "COORDINATED ROUTING OF ELECTION WORKERS"}
               </div>
               <h1>
@@ -256,9 +264,15 @@ export default function Home() {
                   <div className="stats">
                     <Stat
                       icon={<Globe2 />}
-                      value="3"
-                      label="Demo jurisdictions"
-                      detail="Across three US states"
+                      value={`${data.jurisdictions.length}`}
+                      label="Jurisdictions"
+                      detail={
+                        data.jurisdictions.some(
+                          (j) => j.jurisdiction.real_locations,
+                        )
+                          ? "Including real polling places"
+                          : "Synthetic demo sites"
+                      }
                     />
                     <Stat
                       icon={<Users />}
@@ -270,7 +284,14 @@ export default function Home() {
                       icon={<MapPin />}
                       value={`${totalLocations}`}
                       label="Voting locations"
-                      detail="24 distinct precincts"
+                      detail={(() => {
+                        const real = data.jurisdictions
+                          .filter((j) => j.jurisdiction.real_locations)
+                          .reduce((n, j) => n + j.locations.length, 0);
+                        return real
+                          ? `${real} real polling places · rest synthetic`
+                          : "Synthetic demo sites";
+                      })()}
                     />
                     <Stat
                       icon={<BarChart3 />}
@@ -344,6 +365,14 @@ export default function Home() {
                       </button>
                     </section>
                   </div>
+                  <ImportPanel
+                    configured={data.polling_api_configured}
+                    request={request}
+                    onImported={(next, id) => {
+                      setData(next);
+                      select(id);
+                    }}
+                  />
                   <div className="section-heading jurisdiction-heading">
                     <div>
                       <h2>Choose your jurisdiction</h2>
@@ -390,7 +419,11 @@ export default function Home() {
                               <ArrowRight size={18} />
                             </h3>
                             <p>
-                              50 workers <span>·</span> 4 voting locations
+                              {j.workers.length} workers <span>·</span>{" "}
+                              {j.locations.length}{" "}
+                              {j.jurisdiction.real_locations
+                                ? "real polling places"
+                                : "voting locations"}
                             </p>
                             <span className="small">
                               {j.plan
@@ -577,7 +610,8 @@ export default function Home() {
                     <section className="impact">
                       <strong>Cancellation recovery</strong>
                       <span>
-                        3 cancelled: {current.impact.cancelled_ids.join(", ")}
+                        {current.impact.cancelled_ids.length} cancelled:{" "}
+                        {current.impact.cancelled_ids.join(", ")}
                       </span>
                       <span>
                         {current.impact.preserved} assignments preserved
@@ -604,10 +638,14 @@ export default function Home() {
                             <div>
                               <h2>Voting locations</h2>
                               <p>
-                                Physical sites, with their associated precincts.
+                                {current.jurisdiction.real_locations
+                                  ? "Real polling places from official election data."
+                                  : "Physical sites, with their associated precincts."}
                               </p>
                             </div>
-                            <span className="pill">4 locations</span>
+                            <span className="pill">
+                              {current.locations.length} locations
+                            </span>
                           </div>
                           <Map
                             data={data.jurisdictions}
@@ -629,8 +667,9 @@ export default function Home() {
                             </span>
                           </div>
                           <p className="map-note">
-                            Synthetic coordinates · external basemap ·
-                            straight-line travel estimate
+                            {current.jurisdiction.real_locations
+                              ? `Polling places from ${current.jurisdiction.source} · synthetic workers · straight-line travel estimate`
+                              : "Synthetic coordinates · external basemap · straight-line travel estimate"}
                           </p>
                         </section>
                         <section className="panel">
@@ -695,8 +734,17 @@ export default function Home() {
                               </div>
                               <h3>{loc.name}</h3>
                               <p className="small">
-                                Precincts {loc.precincts.join(" · ")}
+                                {loc.address
+                                  ? loc.address
+                                  : `Precincts ${loc.precincts.join(" · ")}`}
                               </p>
+                              {loc.address && (
+                                <span className="pill live-pill">
+                                  {loc.official
+                                    ? "Official polling place"
+                                    : "Polling place"}
+                                </span>
+                              )}
                               <div className="progress">
                                 <span
                                   style={{
@@ -1073,7 +1121,9 @@ export default function Home() {
                                     <tr>
                                       <td>Cancellation recovery</td>
                                       <td>
-                                        {current.impact.recovered} / 3 affected
+                                        {current.impact.recovered} /{" "}
+                                        {current.impact.lost_assignments}{" "}
+                                        affected
                                       </td>
                                       <td>
                                         {current.impact.baseline_recovered} /{" "}

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, model_validator
 from data import SKILLS, dataset
 from engine import PlanError, budget_curve, coverage_stats, evaluate, solve, simulate
 from extraction import extract
+from polling import PollingError, build_jurisdiction, configured, fetch_polling_places
 
 app = FastAPI(title="PollCREW synthetic demo", version="0.1.0")
 sessions = {}
@@ -80,6 +81,21 @@ class BudgetUpdate(BaseModel):
     surge_budget: int = Field(ge=0, le=20)
 
 
+class PollingImport(BaseModel):
+    addresses: list[str] = Field(min_length=1, max_length=25)
+    name: str = Field(min_length=1, max_length=80)
+    state: str = Field(min_length=2, max_length=40)
+    code: str = Field(min_length=2, max_length=2)
+    election_id: int | None = None
+
+    @model_validator(mode="after")
+    def clean(self):
+        self.addresses = [a.strip() for a in self.addresses if a.strip()][:25]
+        if not self.addresses:
+            raise ValueError("Enter at least one address")
+        return self
+
+
 class Approval(BaseModel):
     revision: int
 
@@ -109,6 +125,7 @@ def snapshot(sid):
             "extraction_mode": os.getenv("EXTRACTION_MODE", "offline"),
             "matching_mode": os.getenv("EMBEDDING_MODE", "sentence-transformers"),
             "synthetic": True,
+            "polling_api_configured": configured(),
         }
     )
 
@@ -119,6 +136,59 @@ def require_draft(data):
             409,
             "Reset this demo before editing requirements or worker profiles so approved assignments stay consistent.",
         )
+
+
+def disrupt(data, ids, event):
+    before = copy.deepcopy(data["plan"])
+    for w in data["workers"]:
+        if w["id"] in ids:
+            w["cancelled"] = True
+    remaining = [a for a in before["assignments"] if a["worker_id"] not in ids]
+    stats = coverage_stats(data, remaining)
+    data["before"] = before
+    data["plan"]["assignments"] = remaining
+    data["plan"].update(
+        approved=False,
+        disrupted=True,
+        coverage=stats["filled"] / before["needed"],
+        surge_assigned=stats["surge_assigned"],
+        simulation=simulate(data, remaining),
+    )
+    data["plan"]["gaps"] = []
+    for loc in data["locations"]:
+        for req in loc["requirements"]:
+            count = sum(
+                a["location_id"] == loc["id"] and a["role"] == req["role"]
+                for a in remaining
+            )
+            if count < req["desired"]:
+                data["plan"]["gaps"].append(
+                    {
+                        "location": loc["name"],
+                        "role": req["role"],
+                        "unfilled": req["desired"] - count,
+                        "minimum_shortfall": max(0, req["minimum"] - count),
+                    }
+                )
+    data["plan"]["minimums_met"] = all(
+        g["minimum_shortfall"] == 0 for g in data["plan"]["gaps"]
+    )
+    data["plan"]["status"] = "DISRUPTED"
+    data["plan"]["match_quality"] = (
+        round(sum(a["score"] for a in remaining) / len(remaining), 1)
+        if remaining
+        else 0
+    )
+    data["impact"] = {
+        "cancelled_ids": list(ids),
+        "lost_assignments": len(before["assignments"]) - len(remaining),
+        "preserved": len(remaining),
+        "before_risk": before["simulation"]["risk_percent"],
+        "after_risk": data["plan"]["simulation"]["risk_percent"],
+        "recovered": None,
+    }
+    data["revision"] += 1
+    data["events"].append(event)
 
 
 @app.get("/api/health")
@@ -137,7 +207,7 @@ def create_session():
                 503, "Demo session capacity reached. Restart the local demo server."
             )
         sid = str(uuid.uuid4())
-        sessions[sid] = {"data": dataset(), "touched": time.monotonic()}
+        sessions[sid] = {"data": dataset(), "imports": {}, "touched": time.monotonic()}
         return {"session_id": sid, **snapshot(sid)}
 
 
@@ -151,7 +221,9 @@ def get_state(x_demo_session: Session):
 def reset(x_demo_session: Session):
     with mutex:
         state(x_demo_session)
-        sessions[x_demo_session]["data"] = dataset()
+        fresh = dataset()
+        fresh.update(copy.deepcopy(sessions[x_demo_session].get("imports", {})))
+        sessions[x_demo_session]["data"] = fresh
         return snapshot(x_demo_session)
 
 
@@ -240,65 +312,70 @@ def cancel(jid: str, x_demo_session: Session):
                 409,
                 "Approve the initial plan first. Cancellation demo runs once per reset.",
             )
-        before = copy.deepcopy(data["plan"])
-        check_in = [a for a in before["assignments"] if a["role"] == "Check-in"]
+        check_in = [a for a in data["plan"]["assignments"] if a["role"] == "Check-in"]
         ordered = sorted(check_in, key=lambda a: (a["location_id"], a["worker_id"]))
         ids = [a["worker_id"] for a in ordered[:3]]
         if len(ids) < 3:
             raise HTTPException(
                 409, "This scenario requires at least three assigned check-in workers."
             )
-        for w in data["workers"]:
-            if w["id"] in ids:
-                w["cancelled"] = True
-        remaining = [a for a in before["assignments"] if a["worker_id"] not in ids]
-        data["before"] = before
-        data["plan"]["assignments"] = remaining
-        data["plan"].update(
-            approved=False,
-            disrupted=True,
-            coverage=coverage_stats(data, remaining)["filled"] / before["needed"],
-            surge_assigned=coverage_stats(data, remaining)["surge_assigned"],
-            simulation=simulate(data, remaining),
-        )
-        data["plan"]["gaps"] = []
-        for loc in data["locations"]:
-            for req in loc["requirements"]:
-                count = sum(
-                    a["location_id"] == loc["id"] and a["role"] == req["role"]
-                    for a in remaining
-                )
-                if count < req["desired"]:
-                    data["plan"]["gaps"].append(
-                        {
-                            "location": loc["name"],
-                            "role": req["role"],
-                            "unfilled": req["desired"] - count,
-                            "minimum_shortfall": max(0, req["minimum"] - count),
-                        }
-                    )
-        data["plan"]["minimums_met"] = all(
-            g["minimum_shortfall"] == 0 for g in data["plan"]["gaps"]
-        )
-        data["plan"]["status"] = "DISRUPTED"
-        data["plan"]["match_quality"] = (
-            round(sum(a["score"] for a in remaining) / len(remaining), 1)
-            if remaining
-            else 0
-        )
-        data["impact"] = {
-            "cancelled_ids": ids,
-            "lost_assignments": 3,
-            "preserved": len(remaining),
-            "before_risk": before["simulation"]["risk_percent"],
-            "after_risk": data["plan"]["simulation"]["risk_percent"],
-            "recovered": None,
-        }
-        data["revision"] += 1
-        data["events"].append(
-            "Three synthetic check-in workers cancelled. Remaining approved assignments are locked."
+        disrupt(
+            data,
+            ids,
+            "Three synthetic check-in workers cancelled. Remaining approved assignments are locked.",
         )
         return snapshot(x_demo_session)
+
+
+@app.post("/api/jurisdictions/{jid}/workers/{wid}/unavailable")
+def worker_unavailable(jid: str, wid: str, x_demo_session: Session):
+    with mutex:
+        data = state(x_demo_session, jid)
+        worker = next((w for w in data["workers"] if w["id"] == wid), None)
+        if worker is None:
+            raise HTTPException(404, "Worker not found")
+        if worker["cancelled"]:
+            return snapshot(x_demo_session)
+        plan = data["plan"]
+        assigned = plan and any(a["worker_id"] == wid for a in plan["assignments"])
+        if assigned and (not plan["approved"] or plan.get("disrupted")):
+            raise HTTPException(
+                409,
+                "Your coordinator is updating the plan right now. Try again in a minute.",
+            )
+        if assigned:
+            disrupt(
+                data,
+                [wid],
+                f"{worker['name']} reported they cannot work. Remaining approved assignments are locked.",
+            )
+        else:
+            worker["cancelled"] = True
+            data["events"].append(f"{worker['name']} marked themselves unavailable.")
+        return snapshot(x_demo_session)
+
+
+@app.post("/api/polling-places/import")
+def import_polling_places(body: PollingImport, x_demo_session: Session):
+    with mutex:
+        state(x_demo_session)
+    try:
+        places, lookups = fetch_polling_places(body.addresses, body.election_id)
+        imported = build_jurisdiction(places, body.name, body.state, body.code)
+    except PollingError as exc:
+        raise HTTPException(503, str(exc))
+    jid = imported["jurisdiction"]["id"]
+    with mutex:
+        session = sessions.get(x_demo_session)
+        if session is None:
+            raise HTTPException(
+                404, "Demo session expired. Reload to start a fresh demo."
+            )
+        session.setdefault("imports", {})[jid] = copy.deepcopy(imported)
+        session["data"][jid] = imported
+        result = snapshot(x_demo_session)
+    result["import"] = {"jurisdiction_id": jid, "lookups": lookups}
+    return result
 
 
 @app.post("/api/jurisdictions/{jid}/recover")

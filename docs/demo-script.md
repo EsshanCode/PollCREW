@@ -34,6 +34,8 @@ Click Simulate 3 cancellations. Show 31 preserved assignments and risk jumping t
 
 “Three workers cancel. They stay unavailable. We re-solve with backups and lock every unaffected approved assignment. If the requirements cannot be met, the app returns an actionable error instead of breaking constraints.”
 
+Optional, if time allows: instead of the button, open **Poll worker view**, find NC-002, and tap **I can't make it** to show the cancellation coming from a worker's phone in plain language, with a Spanish toggle and large text.
+
 **2:15–2:40 · Coordinator control**
 
 Click Approve revised plan, then Overview.

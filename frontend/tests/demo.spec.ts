@@ -129,3 +129,60 @@ test("mobile overview and requirements validation", async ({ page }) => {
     ),
   ).toBeTruthy();
 });
+
+test("poll worker answers questions, sees assignment and cancels", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/worker");
+  await expect(
+    page.getByRole("heading", { name: "Who are you?" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Morgan Rivera/ }).click();
+  await page
+    .getByLabel("Your experience")
+    .fill("I worked the front desk at a clinic. I speak Spanish.");
+  await page.getByRole("button", { name: "Find my skills" }).click();
+  await expect(
+    page.getByText("You said: “I speak Spanish.”", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("radio", { name: /Yes, all day/ }).click();
+  await page.getByRole("radio", { name: /Yes, I finished it/ }).click();
+  await page.getByRole("radio", { name: /Up to 10 miles/ }).click();
+  await page.getByRole("button", { name: "Save my answers" }).click();
+  await expect(
+    page.getByRole("heading", { name: /answers are saved/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Español" }).click();
+  await expect(
+    page.getByRole("heading", { name: /respuestas están guardadas/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "English" }).click();
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: /NC North Carolina Wake County/ })
+    .click();
+  await page
+    .getByRole("button", { name: "Generate assignments", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Approve plan", exact: true })
+    .click({ timeout: 60000 });
+  await expect(page.getByText("Plan approved inside the demo.")).toBeVisible();
+  await page.getByRole("link", { name: "Poll worker view" }).click();
+  await page.getByLabel("Search your name").fill("NC-002");
+  await page.getByRole("button", { name: /NC-002/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your Election Day" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "I can’t make it" }).click();
+  await page.getByRole("button", { name: "Yes, I can’t make it" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Thank you for letting us know" }),
+  ).toBeVisible();
+  await page.screenshot({ path: "test-results/worker.png", fullPage: true });
+  expect(errors).toEqual([]);
+});

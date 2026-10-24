@@ -2,7 +2,7 @@
 
 **Coordinated Routing of Election Workers · Hack/OHIO 2026**
 
-> **Full AI assistance disclosure:** This prototype was designed, implemented, documented, and tested with substantial generative AI assistance through OpenAI Codex (Astra). AI assistance includes the Python backend, optimization and simulation implementation, React interface, synthetic data generator, tests, documentation, and demo preparation. The risk-aware staffing update (extra-staff budget, exact line-risk objective, trade-off chart) was made with Claude (Anthropic) assistance. The commit history records individual file changes; it is not evidence of unaided human authorship. Human review is necessary before use beyond this hackathon demonstration.
+> **Full AI assistance disclosure:** This prototype was designed, implemented, documented, and tested with substantial generative AI assistance through OpenAI Codex (Astra). AI assistance includes the Python backend, optimization and simulation implementation, React interface, synthetic data generator, tests, documentation, and demo preparation. The risk-aware staffing update (extra-staff budget, exact line-risk objective, trade-off chart), the poll worker view, and the real polling-place import were made with Claude (Anthropic) assistance. The commit history records individual file changes; it is not evidence of unaided human authorship. Human review is necessary before use beyond this hackathon demonstration.
 
 PollCREW is a national, nonpartisan staffing prototype. Choose a synthetic jurisdiction, confirm a worker’s skills, generate an explainable assignment plan that places a limited number of extra check-in workers where they cut long-line risk the most, simulate three cancellations, recover with backups while preserving unaffected approved assignments, and approve the revision.
 
@@ -39,6 +39,29 @@ uv run python -c 'from engine import contextual_quality; print(contextual_qualit
 ```
 
 For an entirely offline calculation demo, start the backend with `EMBEDDING_MODE=offline`. This uses explicitly labeled exact-skill overlap instead of embeddings. Download dependencies and the model beforehand for contextual matching without network access. The national map uses bundled state boundaries; local street tiles require Internet access. The site list and assignment engine do not depend on tile availability.
+
+## Poll worker view
+
+Open <http://127.0.0.1:3000/worker>, or use **Poll worker view** in the coordinator sidebar so both views share one demo session. It is built for poll workers of every background, most of whom are 61 or older:
+
+- One question per screen with a step counter and Back link, following the GOV.UK "one thing per page" pattern.
+- 20 px base text with a **Larger text** toggle (24 px), 56–60 px tap targets, high-contrast colors, and icons that always carry a text label.
+- An **Español** toggle on every screen; preferences are remembered on the device.
+- Plain-language skill cards ("Check voters in", "Help voters with disabilities"). Suggested skills quote the worker's own sentence, and nothing is selected until the worker taps it. Offline extraction understands everyday wording such as "front desk" or "nurse" and simple Spanish sentences.
+- After the plan exists, the worker sees one card: date and arrival time, polling place and address, job in plain words, team lead, hours, a **Get directions** link, and an **I can't make it** button. That button (after a confirmation screen) removes them from the approved plan, locks everyone else, and puts the coordinator in recovery mode with updated line risk.
+- Travel limits are asked in miles and stored in kilometers.
+
+Spanish text was drafted with AI assistance and should be reviewed by a native speaker before real use. Workers sign in by picking a sample name in this demo; a real launch would use a link sent by text message.
+
+## Real polling places
+
+The national overview can import real polling places through the [Google Civic Information API](https://developers.google.com/civic-information) `voterinfo` endpoint, which returns the official Election Day polling location for an address from the Voting Information Project. Each unique location with coordinates becomes a site in a new jurisdiction (up to eight). Workers, arrival rates, and staffing requirements remain synthetic and labeled as such.
+
+1. Create a free API key in the Google Cloud console and enable the Civic Information API.
+2. Start the backend with the key: `GOOGLE_CIVIC_API_KEY=your-key uv run uvicorn main:app --host 127.0.0.1 --port 8000`.
+3. On the national overview, keep or edit the sample Columbus addresses and click **Find polling places**.
+
+Results depend on the election being loaded in the Voting Information Project; residential addresses work best. The key stays on the server and is never sent to the browser. Imported jurisdictions survive **Reset demo**.
 
 ## Runtime AI, separately from development assistance
 
@@ -117,7 +140,7 @@ npx playwright install chromium
 npm test
 ```
 
-Start the backend before running browser tests. The browser suite starts the frontend production server if needed. Tests cover constraints, rejected-skill exclusion, cancellations, locked assignments, insufficient backups, repeatable simulations, exact-versus-Monte-Carlo risk agreement, budget limits, risk-aware allocation beating even spread in every jurisdiction, recovery restoring low risk, stale approvals, session isolation, reset, worker confirmation, assignment review, budget editing, and mobile requirements validation. See `docs/verification.md` for the actual checks completed and environmental limitations.
+Start the backend before running browser tests. The browser suite starts the frontend production server if needed. Tests cover the poll worker flow (questions, Spanish toggle, assignment card, "I can't make it"), polling-place import with simulated API responses, constraints, rejected-skill exclusion, cancellations, locked assignments, insufficient backups, repeatable simulations, exact-versus-Monte-Carlo risk agreement, budget limits, risk-aware allocation beating even spread in every jurisdiction, recovery restoring low risk, stale approvals, session isolation, reset, worker confirmation, assignment review, budget editing, and mobile requirements validation. See `docs/verification.md` for the actual checks completed and environmental limitations.
 
 Code is intentionally free of explanatory comments; design explanations live here and in documentation. Build-generated files may contain framework-generated notices and are excluded from Git.
 

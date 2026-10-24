@@ -28,3 +28,9 @@ Checked on October 24, 2026, on Linux with Python 3.13, Node 22, OR-Tools CP-SAT
 - Frontend: strict TypeScript check and production build.
 - Browser: both Playwright tests pass, including budget editing and the trade-off chart rendering on the Evaluation tab.
 - `benchmark-results.json` was regenerated in offline matching mode; contextual (sentence-transformers) matching was not re-run for this update.
+
+## Poll worker view and real polling places
+
+- Backend: 28 passing tests, including polling-place deduplication, missing-key and per-address error reporting, solving an imported jurisdiction, import surviving reset, and a worker's "I can't make it" request disrupting an approved plan.
+- Browser: three Playwright tests pass, including the full poll worker flow at phone width.
+- The Google Civic Information API was exercised only with simulated responses; live lookups need a key and network access on the presenting machine.
