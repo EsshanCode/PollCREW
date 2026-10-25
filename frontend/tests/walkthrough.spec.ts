@@ -87,3 +87,47 @@ test("shared navigation links the walkthrough to the rest of the site", async ({
   await page.getByRole("link", { name: "Back to matching my ballot" }).click();
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("math lab updates formulas and diagnostics without changing the ballot scores", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/additional-features");
+  const lab = page.locator("#ballot-math-lab");
+  await expect(lab.getByRole("heading", { name: "The math behind the match." })).toBeVisible();
+  await expect(lab.getByText("s = [0.8125, 0.8125, 0.5000]", { exact: true })).toBeVisible();
+  await expect(page.getByText("Aster", { exact: true })).toHaveCount(0);
+  await lab.getByRole("button", { name: "Monte Carlo", exact: true }).click();
+  await expect(page.getByTestId("mc-share")).toContainText("42.20%");
+  await lab.getByLabel("Inspect candidate").selectOption("1");
+  await expect(page.getByTestId("mc-share")).toContainText("57.75%");
+  await lab.getByRole("slider", { name: /Simulation prefix/ }).fill("200");
+  await expect(page.getByTestId("mc-share")).toContainText("/ 200 runs");
+  await expect(page.locator(".be-result-row strong")).toHaveText(["81.3%", "81.3%", "50.0%"]);
+  await lab.getByRole("button", { name: "Information theory", exact: true }).click();
+  await expect(lab.getByText(/Using the first/)).toContainText("200");
+  await expect(lab.getByRole("table", { name: "Share of runs at each rank" })).toBeVisible();
+  await lab.getByRole("button", { name: "Sensitivity", exact: true }).click();
+  await lab.getByLabel("Inspect candidate").selectOption("0");
+  await expect(lab.getByText("+4.69 pp / weight", { exact: true })).toBeVisible();
+  await page.getByRole("slider", { name: /School funding importance/ }).fill("3");
+  await expect(lab.getByText("+3.00 pp / weight", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "05 Reveal", exact: true }).click();
+  await expect(lab.getByLabel("Inspect candidate").locator("option")).toHaveText(["Aster", "Juniper", "Cedar"]);
+  expect(errors).toEqual([]);
+});
+
+test("all mathematical views fit a phone and keep their equations readable", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("/additional-features");
+  for (const name of ["Vector algebra", "Monte Carlo", "Sensitivity", "Information theory"]) {
+    await page.getByRole("button", { name, exact: true }).click();
+    const overflow = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>(".bm-formula, .bm-panel, .bm-matrix")].filter((node) => node.scrollWidth > node.clientWidth + 1).map((node) => node.textContent));
+    expect(overflow).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.locator("#ballot-math-lab").screenshot({ path: `test-results/math-${name.replaceAll(" ", "-")}-320.png` });
+  }
+  await page.setViewportSize({ width: 1024, height: 1000 });
+  await page.getByRole("button", { name: "Monte Carlo", exact: true }).click();
+  await page.locator("#ballot-math-lab").screenshot({ path: "test-results/math-monte-carlo-desktop.png" });
+});

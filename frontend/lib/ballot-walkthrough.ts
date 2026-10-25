@@ -34,6 +34,8 @@ export function calculateWalkthrough(importance: Importance) {
   );
   const counts = [0, 0, 0];
   const winners: number[] = [];
+  const draws: number[][] = [];
+  const orders: number[][] = [];
   const random = seededRandom(426123 + importance);
   const normal = () => Math.sqrt(-2 * Math.log(Math.max(1e-12, random()))) * Math.cos(2 * Math.PI * random());
 
@@ -44,18 +46,25 @@ export function calculateWalkthrough(importance: Importance) {
     const denominator = perturbedWeights.reduce((a, b) => a + b, 0);
     let best = -1;
     let winner = 0;
+    const sample: number[] = [];
+    const rankingScores: number[] = [];
     DEMO_CANDIDATES.forEach((candidate, i) => {
       const score = candidate.positions.reduce<number>(
         (sum, position, j) => sum + perturbedWeights[j] * agreement(answers[j], position),
         0,
-      ) / denominator + random() * 1e-9;
-      if (score > best) {
-        best = score;
+      ) / denominator;
+      sample.push(score);
+      const rankingScore = score + random() * 1e-9;
+      rankingScores.push(rankingScore);
+      if (rankingScore > best) {
+        best = rankingScore;
         winner = i;
       }
     });
     counts[winner]++;
     winners.push(winner);
+    draws.push(sample);
+    orders.push([0, 1, 2].sort((a, b) => rankingScores[b] - rankingScores[a]));
   }
-  return { scores, counts, winners };
+  return { scores, counts, winners, draws, orders };
 }
