@@ -225,8 +225,7 @@ export default function About() {
         </div>
       </main>
       <footer className="foot">
-        Blind Ballot, HackOHI/O 2026. Nonpartisan. No ads, no paid placement,
-        and your answers are never saved. Built with AI assistance.
+        Blind Ballot, HackOHI/O 2026. Nonpartisan, no ads, nothing saved.
       </footer>
     </div>
   );
