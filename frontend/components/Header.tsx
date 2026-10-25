@@ -1,6 +1,10 @@
 import { LogoMark } from "./Brand";
 
-export default function Header({ active }: { active: "voter" | "candidate" }) {
+export default function Header({
+  active,
+}: {
+  active: "voter" | "candidate" | "about";
+}) {
   return (
     <>
       <header className="top">
@@ -16,6 +20,9 @@ export default function Header({ active }: { active: "voter" | "candidate" }) {
           </a>
           <a href="/candidates" className={active === "candidate" ? "on" : ""}>
             For candidates
+          </a>
+          <a href="/about" className={active === "about" ? "on" : ""}>
+            How it works
           </a>
         </nav>
       </header>
