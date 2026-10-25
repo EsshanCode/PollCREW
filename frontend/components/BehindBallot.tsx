@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { Mascot } from "./Brand";
 import BallotProcessCanvas from "./BallotProcessCanvas";
+import BallotMathLab, { StageEquation } from "./BallotMathLab";
 import {
   agreement,
   calculateWalkthrough,
@@ -122,6 +123,7 @@ export default function BehindBallot() {
             <span className="be-code">{current.readLabel}</span><strong>{readValue}</strong><span>{current.readNote}</span>
           </div>
         </div>
+        <StageEquation step={step} />
         <div className="be-explanation">
           <span className="be-step-number">{number}</span>
           <div><strong>{current.caption}</strong><p>{description}</p></div>
@@ -165,6 +167,7 @@ export default function BehindBallot() {
           </div>
         </details>
       </section>
+      <BallotMathLab importance={importance} result={result} revealed={step === 4} />
       <footer className="be-footer"><span>Behind the ballot <span className="be-slash">/</span> Optional explanation</span><a href="/">Back to matching my ballot →</a></footer>
       <div className="be-sr" role="status">Step {step + 1}: {current.title} School funding importance {importance} of 3. {result.scores.map((score, i) => `${candidateLabel(i)}: ${(score * 100).toFixed(1)}%`).join(". ")}</div>
     </div>
