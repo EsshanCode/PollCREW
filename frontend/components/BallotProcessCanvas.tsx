@@ -79,7 +79,8 @@ export default function BallotProcessCanvas({ step, importance, result, summary 
 
       function paint(now: number) {
         if (disposed) return;
-        const progress = duration ? Math.min(1, (now - start) / duration) : 1;
+        // A frame's shared timestamp can be earlier than this effect's start time.
+        const progress = duration ? Math.max(0, Math.min(1, (now - start) / duration)) : 1;
         const eased = 1 - Math.pow(1 - progress, 3);
         ctx.clearRect(0, 0, w, h);
         ctx.save();
