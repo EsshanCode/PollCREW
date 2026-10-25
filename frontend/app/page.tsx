@@ -70,10 +70,10 @@ const FACTS = [
   },
 ];
 const LEAN_TEXT = {
-  yes: "Your answers lean YES",
-  no: "Your answers lean NO",
-  mixed: "Your answers are mixed on this one",
-  unknown: "You skipped the questions this depends on",
+  yes: "You lean YES",
+  no: "You lean NO",
+  mixed: "You’re split on this one",
+  unknown: "You skipped these questions",
 };
 
 export default function Voter() {
@@ -81,6 +81,9 @@ export default function Voter() {
   const [waking, setWaking] = useState(false);
   const [step, setStep] = useState<Step>("intro");
   const [address, setAddress] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [zip, setZip] = useState("");
   const [countyId, setCountyId] = useState("");
   const [real, setReal] = useState<LookupResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
@@ -88,6 +91,7 @@ export default function Voter() {
   const [party, setParty] = useState<string | null>(null);
   const [result, setResult] = useState<MatchResult | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [slide, setSlide] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -99,7 +103,7 @@ export default function Voter() {
   }, []);
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [step, qIndex]);
+  }, [step, qIndex, slide]);
 
   const county: County | undefined = state?.counties.find(
     (c) => c.id === countyId,
@@ -110,6 +114,16 @@ export default function Voter() {
     return state.issues.filter((i) => used.has(i.id));
   }, [state, county]);
   const question = questions[qIndex];
+  const zipOk = /^4[345]\d{3}$/.test(zip);
+  const fullAddress = [street.trim(), city.trim(), `OH ${zip}`]
+    .filter(Boolean)
+    .join(", ");
+  const slides = result
+    ? [
+        ...result.races.map((r) => r.office),
+        ...result.measures.map((m) => m.title),
+      ]
+    : [];
   const current = question ? answers[question.id] : undefined;
 
   async function findBallot(text: string) {
@@ -143,6 +157,7 @@ export default function Voter() {
         await api<MatchResult>("/match", state.session_id, "POST", body),
       );
       setRevealed(false);
+      setSlide(0);
       setStep("results");
     } catch (e) {
       setError((e as Error).message);
@@ -173,6 +188,9 @@ export default function Voter() {
     setCountyId("");
     setReal(null);
     setAddress("");
+    setStreet("");
+    setCity("");
+    setZip("");
     setStep("intro");
   }
   const back: Partial<Record<Step, () => void>> = {
@@ -189,11 +207,7 @@ export default function Voter() {
   return (
     <div className="page">
       <Header active="voter" />
-      <main
-        className={
-          step === "results" || step === "sheet" ? "wrap wide" : "wrap"
-        }
-      >
+      <main className={step === "sheet" ? "wrap wide" : "wrap"}>
         {back[step] && (
           <button className="back" onClick={back[step]}>
             <ArrowLeft size={18} /> Back
@@ -273,37 +287,68 @@ export default function Voter() {
           <section className="panel step">
             <h1>Where do you vote?</h1>
             <p className="lead">
-              Your address decides which races are on your ballot. It’s only
-              used for this lookup. Works for any Ohio address.
+              Only your ZIP is needed. Add your street for your exact districts.
+              Nothing is saved.
             </p>
             <form
               className="address"
               onSubmit={(e) => {
                 e.preventDefault();
-                findBallot(address);
+                if (zipOk) findBallot(fullAddress);
               }}
             >
-              <label htmlFor="address">Street address, city and ZIP</label>
-              <div className="address-row">
+              <div className="field wide">
+                <label htmlFor="street">
+                  Street address <span className="opt">optional</span>
+                </label>
                 <input
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. 2840 E Orange Rd, Lewis Center, OH 43035"
-                  autoComplete="street-address"
+                  id="street"
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  placeholder="2840 E Orange Rd"
+                  autoComplete="address-line1"
                 />
-                <button
-                  className="primary"
-                  disabled={busy || address.trim().length < 3}
-                >
-                  <MapPin size={18} /> Find my ballot
-                </button>
               </div>
+              <div className="field">
+                <label htmlFor="city">
+                  City <span className="opt">optional</span>
+                </label>
+                <input
+                  id="city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Lewis Center"
+                  autoComplete="address-level2"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="zip">
+                  ZIP code <span className="req">required</span>
+                </label>
+                <input
+                  id="zip"
+                  value={zip}
+                  onChange={(e) =>
+                    setZip(e.target.value.replace(/\D/g, "").slice(0, 5))
+                  }
+                  placeholder="43035"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  required
+                  aria-invalid={zip.length === 5 && !zipOk}
+                  aria-describedby="zip-help"
+                />
+              </div>
+              <p id="zip-help" className="fine wide">
+                {zip.length === 5 && !zipOk
+                  ? "That’s not an Ohio ZIP. Ohio ZIPs start with 43, 44 or 45."
+                  : "Ohio ZIPs start with 43, 44 or 45."}
+              </p>
+              <button className="primary wide" disabled={busy || !zipOk}>
+                <MapPin size={18} /> Find my ballot
+              </button>
             </form>
-            <p className="fine">
-              Full blind matching (demo candidates) in Delaware and Franklin
-              County. Try:
-            </p>
+            <p className="fine">Or try a demo county:</p>
             <div className="chips">
               {state.counties.map((c) => (
                 <button
@@ -327,11 +372,12 @@ export default function Voter() {
             {!county ? (
               <section className="panel step">
                 <p className="eyebrow-chip">
-                  <MapPin size={14} /> {real.districts?.county}, Ohio
+                  <MapPin size={14} /> {real.districts?.county ?? `ZIP ${zip}`},
+                  Ohio
                 </p>
                 <h1>
-                  Local candidates for {real.districts?.county} aren’t in Blind
-                  Ballot yet
+                  Local candidates for {real.districts?.county ?? "your county"}{" "}
+                  aren’t in Blind Ballot yet
                 </h1>
                 <p className="lead">
                   Your county board of elections publishes the official local
@@ -521,7 +567,7 @@ export default function Voter() {
         {step === "results" && result && county && (
           <section className="results">
             <div className={revealed ? "banner revealed" : "banner"}>
-              <Mascot size={110} blindfold={!revealed} />
+              <Mascot size={90} blindfold={!revealed} />
               <div>
                 {revealed ? (
                   <>
@@ -530,76 +576,98 @@ export default function Voter() {
                       {result.summary.matched} races, your best match was not
                       the biggest spender.
                     </h1>
-                    <p className="lead">
-                      {result.summary.usual_party &&
+                    {result.summary.usual_party &&
                       ["Democratic", "Republican"].includes(
                         result.summary.usual_party,
-                      )
-                        ? `${result.summary.crossed_party} of your top matches ${result.summary.crossed_party === 1 ? "comes" : "come"} from outside your usual party. `
-                        : ""}
-                      Matching never saw names, parties or money.
-                    </p>
+                      ) &&
+                      result.summary.crossed_party > 0 && (
+                        <p className="lead">
+                          {result.summary.crossed_party} of your best matches{" "}
+                          {result.summary.crossed_party === 1 ? "is" : "are"}{" "}
+                          outside your usual party.
+                        </p>
+                      )}
                   </>
                 ) : (
                   <>
                     <h1>Your blind matches are ready</h1>
-                    <p className="lead">
-                      Ranked only by what candidates say they’d do. Names,
-                      parties and spending are hidden.
-                    </p>
+                    <p className="lead">Names, parties and money are hidden.</p>
                   </>
                 )}
               </div>
-              <div className="banner-actions">
+              <button
+                role="switch"
+                aria-checked={revealed}
+                aria-label="Reveal who they are"
+                className={revealed ? "reveal-toggle on" : "reveal-toggle"}
+                onClick={() => setRevealed(!revealed)}
+              >
+                <span className="toggle-label">
+                  {revealed ? <Eye size={18} /> : <EyeOff size={18} />}
+                  {revealed ? "Names shown" : "Names hidden"}
+                </span>
+                <span className="toggle-track" aria-hidden>
+                  <span className="toggle-knob" />
+                </span>
+              </button>
+            </div>
+            <nav className="slide-dots" aria-label="Races">
+              {slides.map((label, i) => (
                 <button
-                  role="switch"
-                  aria-checked={revealed}
-                  aria-label="Reveal who they are"
-                  className={revealed ? "reveal-toggle on" : "reveal-toggle"}
-                  onClick={() => setRevealed(!revealed)}
-                >
-                  <span className="toggle-label">
-                    {revealed ? <Eye size={18} /> : <EyeOff size={18} />}
-                    {revealed ? "Revealed" : "Blind"}
-                  </span>
-                  <span className="toggle-track" aria-hidden>
-                    <span className="toggle-knob" />
-                  </span>
-                  <span className="toggle-hint">
-                    {revealed ? "Tap to hide again" : "Tap to reveal"}
-                  </span>
+                  key={label}
+                  className={i === slide ? "dot on" : "dot"}
+                  aria-label={`${i + 1}: ${label}`}
+                  aria-current={i === slide ? "step" : undefined}
+                  onClick={() => setSlide(i)}
+                />
+              ))}
+              <span>
+                {slide + 1} of {slides.length}
+              </span>
+            </nav>
+            <div className="slide" key={slide}>
+              {slide < result.races.length ? (
+                <RaceCard race={result.races[slide]} revealed={revealed} />
+              ) : (
+                (() => {
+                  const m = result.measures[slide - result.races.length];
+                  return (
+                    <section className="race measure-card">
+                      <header>
+                        <div>
+                          <h2>{m.title}</h2>
+                          <p className="small">{m.what}</p>
+                        </div>
+                        <span className="chip">Yes or no</span>
+                      </header>
+                      <p className={`lean ${m.lean}`}>{LEAN_TEXT[m.lean]}</p>
+                      <p className="small">
+                        From your answers on parks, libraries and taxes.
+                      </p>
+                    </section>
+                  );
+                })()
+              )}
+            </div>
+            <div className="slide-nav">
+              <button
+                className="secondary"
+                disabled={slide === 0}
+                onClick={() => setSlide(slide - 1)}
+              >
+                <ArrowLeft size={18} /> Back
+              </button>
+              {slide < slides.length - 1 ? (
+                <button className="primary" onClick={() => setSlide(slide + 1)}>
+                  Next <ArrowRight size={18} />
                 </button>
-                {revealed && (
-                  <button className="primary" onClick={() => setStep("sheet")}>
-                    <Printer size={18} /> Make my ballot sheet
-                  </button>
-                )}
-              </div>
+              ) : (
+                <button className="primary" onClick={() => setStep("sheet")}>
+                  <Printer size={18} /> Make my ballot sheet
+                </button>
+              )}
             </div>
-            <div className="races">
-              {result.races.map((race) => (
-                <RaceCard key={race.race_id} race={race} revealed={revealed} />
-              ))}
-              {result.measures.map((m) => (
-                <section key={m.id} className="race measure-card">
-                  <header>
-                    <div>
-                      <h2>{m.title}</h2>
-                      <p className="small">{m.what}</p>
-                    </div>
-                  </header>
-                  <p className={`lean ${m.lean}`}>{LEAN_TEXT[m.lean]}</p>
-                  <p className="small">
-                    Based on how you answered about parks and libraries versus
-                    property taxes. Ballot issues have no candidates to hide.
-                  </p>
-                </section>
-              ))}
-            </div>
-            <p className="demo-note">
-              Demo ballot: real offices, fictional candidates, positions and
-              spending.
-            </p>
+            <p className="demo-note">Demo: real offices, made-up candidates.</p>
           </section>
         )}
 
@@ -725,7 +793,7 @@ function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
                 </span>
                 <span className="match-num">{r.match ?? "–"}%</span>
                 <span className="match-tag">
-                  {isBest ? (strong ? "Strong match" : "Close call") : ""}
+                  {isBest ? (strong ? "Best match" : "Close call") : ""}
                 </span>
                 <ChevronDown
                   size={18}
@@ -734,9 +802,9 @@ function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
               </button>
               {revealed && (
                 <p className="money-line">
-                  Spent {money(info.spending)}
+                  {money(info.spending)} spent
                   {info.endorsements.length > 0 &&
-                    ` · Endorsed by ${info.endorsements.join(", ")}`}
+                    ` · Backed by ${info.endorsements.join(", ")}`}
                   {info.source === "self" && " · Self-reported"}
                 </p>
               )}
@@ -746,9 +814,9 @@ function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
                     <p className="small">
                       {race.vote_for > 1
                         ? `Stays in your top ${race.vote_for}`
-                        : "Stays your top match"}{" "}
-                      in {Math.round(r.chance * 100)}% of 2,000 what-ifs, where
-                      we nudge your answers slightly.
+                        : "Stays on top"}{" "}
+                      {Math.round(r.chance * 100)}% of the time if your answers
+                      shift a little.
                     </p>
                   )}
                   <ul className="why">
@@ -758,7 +826,7 @@ function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
                           {w.kind === "agree"
                             ? "Agrees with you"
                             : w.kind === "disagree"
-                              ? "Disagrees"
+                              ? "Disagrees with you"
                               : w.kind === "partly"
                                 ? "Partly agrees"
                                 : "Didn’t answer"}
@@ -778,7 +846,7 @@ function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
         <p className="punchline">
           {race.top_spender_is_best
             ? `Your best match also spent the most (${money(top.spending)}).`
-            : `Your best match spent ${money(race.reveal[best].spending)}. The biggest spender (${money(top.spending)}) matched you ${topMatch}%.`}
+            : `Best match spent ${money(race.reveal[best].spending)}. Top spender (${money(top.spending)}) matched you ${topMatch}%.`}
         </p>
       )}
     </section>

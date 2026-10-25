@@ -1,6 +1,7 @@
 """Blind Ballot API: local ballots, money-blind policy matching, and a candidate portal."""
 
 import copy
+import re
 import threading
 import time
 import uuid
@@ -180,15 +181,16 @@ def lookup(body: Lookup):
             raise HTTPException(404, str(exc)) from exc
         note = str(exc)
     demo = DEMO_FIPS.get(found["county_fips"]) if found else county_for_zip(body.address)
-    if not found and not demo:
+    ohio_zip = re.search(r"\b4[345]\d{3}\b", body.address)
+    if not found and not demo and not ohio_zip:
         raise HTTPException(
             404,
-            note or "Enter your full Ohio street address, city and ZIP.",
+            note or "Enter an Ohio ZIP code (it starts with 43, 44 or 45).",
         )
     return {
         "county": demo,
         "districts": found,
-        "districts_note": None if found else "Enter a full street address to see your exact districts.",
+        "districts_note": None if found else "Add your street address to see your exact districts.",
         "statewide": statewide(),
         "statewide_source": SOURCE,
         "links": {"voter_lookup": SAMPLE_BALLOT_URL, "county_boards": COUNTY_BOARDS_URL},

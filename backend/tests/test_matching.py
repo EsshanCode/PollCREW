@@ -148,7 +148,8 @@ def test_api_flow_and_candidate_portal(monkeypatch):
     h = {"X-Demo-Session": sid}
     assert [c["id"] for c in state["counties"]] == ["delaware", "franklin"]
     assert client.post("/api/lookup", json={"address": "Powell, OH 43065"}).json()["county"] == "delaware"
-    assert client.post("/api/lookup", json={"address": "Akron 44308"}).status_code == 404
+    akron = client.post("/api/lookup", json={"address": "Akron 44308"}).json()  # Ohio ZIP, no demo ballot
+    assert akron["county"] is None and len(akron["statewide"]) == 8
 
     result = client.post(
         "/api/match", headers=h, json={"county": "delaware", "answers": PARENT}

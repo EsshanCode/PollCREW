@@ -450,10 +450,44 @@ button:disabled {
 }
 .address {
   display: grid;
-  gap: 8px;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px 14px;
+  align-items: end;
 }
-.address label {
+.address .wide {
+  grid-column: 1 / -1;
+}
+.field {
+  display: grid;
+  gap: 6px;
+}
+.field label {
   font-weight: 700;
+}
+.field input {
+  min-height: 52px;
+  font-size: 1.05rem;
+}
+.field input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+.opt,
+.req {
+  margin-left: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.opt {
+  color: var(--muted);
+}
+.req {
+  color: var(--red);
+}
+.address .primary {
+  justify-self: start;
+}
+.address .fine {
+  margin: -4px 0 0;
 }
 .address-row {
   display: flex;
@@ -1165,6 +1199,9 @@ fieldset {
   }
 }
 @media (max-width: 620px) {
+  .address {
+    grid-template-columns: 1fr;
+  }
   .top {
     padding: 12px 16px;
   }
@@ -1590,4 +1627,84 @@ fieldset {
     margin-left: 0;
     padding-left: 4px;
   }
+}
+
+/* Results as slides: one race at a time */
+.slide-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.slide-dots .dot {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2.5px solid var(--navy);
+  background: #fff;
+  cursor: pointer;
+}
+.slide-dots .dot.on {
+  background: var(--red);
+  border-color: var(--red);
+  transform: scale(1.2);
+}
+.slide-dots span {
+  margin-left: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.slide .race {
+  border-top-color: var(--red);
+}
+.slide-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.slide-nav button:disabled {
+  visibility: hidden;
+}
+.banner .reveal-toggle {
+  grid-template-columns: auto auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .slide {
+    animation: slide-in 0.22s ease-out;
+  }
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+@media (max-width: 900px) {
+  .banner .reveal-toggle {
+    grid-column: 1 / -1;
+  }
+}
+
+.field label {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 6px;
+}
+.field label .opt,
+.field label .req {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.banner h1 {
+  font-size: clamp(1.3rem, 2.2vw, 1.6rem);
 }

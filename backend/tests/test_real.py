@@ -165,3 +165,12 @@ def test_lookup_endpoint(monkeypatch):
 
     monkeypatch.setattr(main, "districts", outside)
     assert client.post("/api/lookup", json={"address": "Indianapolis, IN"}).status_code == 404
+
+    def unmatched(address):
+        raise CensusError("The Census Bureau couldn't find that address.")
+
+    monkeypatch.setattr(main, "districts", unmatched)
+    body = client.post("/api/lookup", json={"address": "OH 43604"}).json()  # ZIP only, Toledo
+    assert body["county"] is None and body["districts"] is None
+    assert len(body["statewide"]) == 8 and "street address" in body["districts_note"]
+    assert client.post("/api/lookup", json={"address": "OH 90210"}).status_code == 404
