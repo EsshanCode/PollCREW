@@ -68,12 +68,19 @@ test("voter: blind match, reveal, and ballot sheet", async ({ page }) => {
   // Blind: no names before the reveal.
   await expect(page.getByText("Linda Kowalczyk")).toHaveCount(0);
   await expect(page.getByText("Candidate A").first()).toBeVisible();
-  await page.getByRole("button", { name: "Reveal who they are" }).click();
+  await page.getByRole("switch", { name: "Reveal who they are" }).click();
   await expect(
     page.getByRole("heading", {
       name: "In 3 of 3 races, your best match was not the biggest spender.",
     }),
   ).toBeVisible();
+  await expect(page.getByText("Linda Kowalczyk")).toBeVisible();
+  // The toggle hides them again, then reveals.
+  const toggle = page.getByRole("switch", { name: "Reveal who they are" });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
+  await expect(page.getByText("Linda Kowalczyk")).toHaveCount(0);
+  await toggle.click();
   await expect(page.getByText("Linda Kowalczyk")).toBeVisible();
   await expect(
     page.getByText(
@@ -125,7 +132,7 @@ test("candidate portal: a new candidate is matched blind", async ({ page }) => {
   await page.getByRole("button", { name: "Start the questions" }).click();
   await answerAll(page, 0);
   await page.getByRole("button", { name: "See my blind matches" }).click();
-  await page.getByRole("button", { name: "Reveal who they are" }).click();
+  await page.getByRole("switch", { name: "Reveal who they are" }).click();
   await expect(page.getByText("Sam Lee")).toBeVisible();
   await expect(page.getByText("Self-reported")).toBeVisible();
 });
@@ -147,7 +154,7 @@ test("mobile: Franklin County by ZIP, no sideways scrolling", async ({
   await page.getByRole("button", { name: "Start the questions" }).click();
   await answerAll(page, 1);
   await page.getByRole("button", { name: "See my blind matches" }).click();
-  await page.getByRole("button", { name: "Reveal who they are" }).click();
+  await page.getByRole("switch", { name: "Reveal who they are" }).click();
   await page.screenshot({ path: "test-results/mobile.png", fullPage: true });
   expect(
     await page.evaluate(

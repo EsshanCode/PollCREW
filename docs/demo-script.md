@@ -12,7 +12,7 @@ Click Find my ballot → Lewis Center. "Every local race on my ballot, even trus
 "Candidates are A, B, C. No names, no party, no money. Ranked only by what they say they'd do." Open the top Commissioner match: "Here's why, in the candidate's own words." Point to "your best match in 84% of 2,000 what-ifs": "We rerun the match 2,000 times with small changes to my answers, so I know how solid it is."
 
 **1:50–2:30 · The reveal**
-Click Reveal who they are. "In 3 of 3 races, my best match was not the biggest spender. My commissioner match spent $4,100. The biggest spender spent $86,400 and matched me 52%. And one of my matches is outside my usual party." Mention: "The matching code never sees money or party. We have a test that proves changing them can't change a match."
+Flip the Blind / Revealed toggle. "In 3 of 3 races, my best match was not the biggest spender. My commissioner match spent $4,100. The biggest spender spent $86,400 and matched me 52%. And one of my matches is outside my usual party." Mention: "The matching code never sees money or party. We have a test that proves changing them can't change a match."
 
 **2:30–2:50 · Tangible output**
 Make my ballot sheet. "A printable ballot for every race. Ohio lets you bring notes into the booth."

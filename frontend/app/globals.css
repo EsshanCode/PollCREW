@@ -1253,3 +1253,81 @@ fieldset {
 .position legend + * {
   clear: both;
 }
+
+/* Reveal toggle */
+.banner-actions {
+  display: grid;
+  gap: 10px;
+  justify-items: stretch;
+  min-width: 220px;
+}
+.reveal-toggle {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 14px;
+  padding: 12px 16px;
+  border: 2.5px solid var(--navy);
+  border-radius: 18px;
+  background: var(--gold);
+  color: var(--navy);
+  box-shadow: var(--pop);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s,
+    background 0.15s;
+}
+.reveal-toggle:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--navy);
+}
+.reveal-toggle.on {
+  background: #fff;
+}
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+.toggle-hint {
+  grid-column: 1;
+  font-size: 0.82rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+.toggle-track {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  position: relative;
+  width: 64px;
+  height: 36px;
+  border-radius: 99px;
+  background: var(--navy);
+  border: 2.5px solid var(--navy);
+}
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.18s ease-out;
+}
+.reveal-toggle.on .toggle-track {
+  background: var(--red);
+}
+.reveal-toggle.on .toggle-knob {
+  transform: translateX(28px);
+}
+@media (max-width: 900px) {
+  .banner-actions {
+    grid-column: 1 / -1;
+  }
+}

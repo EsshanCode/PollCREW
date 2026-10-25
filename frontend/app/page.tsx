@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   Eye,
+  EyeOff,
   MapPin,
   Printer,
   RotateCcw,
@@ -501,18 +502,31 @@ export default function Voter() {
                   </>
                 )}
               </div>
-              {!revealed ? (
-                <button className="gold big" onClick={() => setRevealed(true)}>
-                  <Eye size={20} /> Reveal who they are
-                </button>
-              ) : (
+              <div className="banner-actions">
                 <button
-                  className="primary big"
-                  onClick={() => setStep("sheet")}
+                  role="switch"
+                  aria-checked={revealed}
+                  aria-label="Reveal who they are"
+                  className={revealed ? "reveal-toggle on" : "reveal-toggle"}
+                  onClick={() => setRevealed(!revealed)}
                 >
-                  <Printer size={20} /> Make my ballot sheet
+                  <span className="toggle-label">
+                    {revealed ? <Eye size={18} /> : <EyeOff size={18} />}
+                    {revealed ? "Revealed" : "Blind"}
+                  </span>
+                  <span className="toggle-track" aria-hidden>
+                    <span className="toggle-knob" />
+                  </span>
+                  <span className="toggle-hint">
+                    {revealed ? "Tap to hide again" : "Tap to reveal"}
+                  </span>
                 </button>
-              )}
+                {revealed && (
+                  <button className="primary" onClick={() => setStep("sheet")}>
+                    <Printer size={18} /> Make my ballot sheet
+                  </button>
+                )}
+              </div>
             </div>
             <div className="races">
               {result.races.map((race) => (
