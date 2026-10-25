@@ -36,6 +36,8 @@ The people who set property taxes, run schools and fix roads end up chosen by ya
 
 **Candidate portal (`/candidates`).** Candidates answer the same questions in the same format, with a 160-character reason for each. Everyone gets the same space: no photos, no ads, no paid placement. Spending is shown only at the reveal (in a real launch it comes from campaign finance reports, not the candidate).
 
+**Additional features (`/additional-features`).** An optional "Behind the ballot" walkthrough shows answer vectors, importance weights, weighted agreement, 2,000 what-if scenarios, and the identity reveal. A clearly labeled fictional three-issue example runs entirely in the browser; changing school-funding importance recomputes its scores and simulations. It uses the backend's perturbation rules with a separate seeded random sequence, and does not read or change a voter's ballot answers.
+
 ## Money-blind by design
 
 - The matching code receives **only stated positions**. Spending, party and endorsements are attached afterwards for the reveal, and a unit test proves that changing them cannot change any match.
