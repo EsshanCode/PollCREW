@@ -1475,3 +1475,119 @@ fieldset {
 .mini-toggle.on .toggle-knob {
   transform: translateX(18px);
 }
+
+/* Calmer results: navy + one red accent */
+.race,
+.race:nth-child(3n + 1),
+.race:nth-child(3n + 3),
+.measure-card {
+  border: 2.5px solid var(--navy) !important;
+  border-top-width: 2.5px !important;
+}
+.candidates {
+  gap: 0;
+  border-top: 2px solid var(--line);
+}
+.cand,
+.cand.best {
+  border: 0;
+  border-bottom: 2px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.cand-row {
+  grid-template-columns: 30px 1fr auto 96px 18px;
+  gap: 10px;
+  padding: 12px 4px;
+}
+.letter {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--navy);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.cand.best .letter {
+  background: var(--navy);
+  color: #fff;
+}
+.cand-name {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.party {
+  font-family: var(--body);
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.match-num {
+  font-size: 1.25rem;
+  color: var(--navy);
+}
+.cand.best .match-num {
+  color: var(--red);
+}
+.match-tag {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--navy);
+  text-align: right;
+}
+.money-line {
+  margin: -6px 0 10px 44px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.details {
+  display: grid;
+  gap: 8px;
+  padding: 0 4px 12px 44px;
+}
+.details .why {
+  padding: 0;
+}
+.lean,
+.lean.yes,
+.lean.no {
+  background: #fff;
+  border: 2px solid var(--navy);
+}
+.banner.revealed {
+  background: #fff;
+  box-shadow: 6px 6px 0 var(--navy);
+}
+.reveal-toggle,
+.reveal-toggle.on {
+  background: #fff;
+}
+.demo-note {
+  border-left-color: var(--line);
+}
+@media (max-width: 620px) {
+  .cand-row {
+    grid-template-columns: 30px 1fr auto;
+  }
+  .match-tag {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+  .cand-row .chev {
+    display: none;
+  }
+  .money-line,
+  .details {
+    margin-left: 0;
+    padding-left: 4px;
+  }
+}

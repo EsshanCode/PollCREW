@@ -89,7 +89,7 @@ test("voter: blind match, reveal, and ballot sheet", async ({ page }) => {
   await expect(page.getByText("Linda Kowalczyk")).toBeVisible();
   await expect(
     page.getByText(
-      "Your best match spent $4.1K. The biggest spender, at $86.4K, matched you 52%.",
+      "Your best match spent $4.1K. The biggest spender ($86.4K) matched you 52%.",
     ),
   ).toBeVisible();
   await page.screenshot({ path: "test-results/reveal.png", fullPage: true });

@@ -688,17 +688,13 @@ export default function Voter() {
 
 function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
   const [open, setOpen] = useState<string | null>(null);
-  const maxSpend = Math.max(
-    1,
-    ...Object.values(race.reveal).map((r) => r.spending),
-  );
   const best = race.best[0];
   const top = race.reveal[race.top_spender];
   const topMatch = race.results.find(
     (r) => r.candidate_id === race.top_spender,
   )?.match;
   return (
-    <section className={revealed ? "race revealed" : "race"}>
+    <section className="race">
       <header>
         <div>
           <h2>{race.office}</h2>
@@ -708,16 +704,12 @@ function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
           {race.vote_for > 1 ? `Vote for ${race.vote_for}` : "Vote for 1"}
         </span>
       </header>
-      {race.close_call && (
-        <p className="close-call">
-          Close call: small changes to your answers could flip this one.
-        </p>
-      )}
       <ol className="candidates">
         {race.results.map((r) => {
           const info = race.reveal[r.candidate_id];
           const isBest = race.best.includes(r.candidate_id);
           const expanded = open === r.candidate_id;
+          const strong = r.chance != null && r.chance >= 0.6;
           return (
             <li key={r.candidate_id} className={isBest ? "cand best" : "cand"}>
               <button
@@ -725,86 +717,59 @@ function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
                 aria-expanded={expanded}
                 onClick={() => setOpen(expanded ? null : r.candidate_id)}
               >
-                <span
-                  className={revealed ? "avatar shown" : "avatar"}
-                  aria-hidden
-                >
-                  {revealed
-                    ? info.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                    : r.letter}
+                <span className="letter" aria-hidden>
+                  {r.letter}
                 </span>
                 <span className="cand-name">
-                  <strong>
-                    {revealed ? info.name : `Candidate ${r.letter}`}
-                  </strong>
-                  {revealed ? (
-                    <span className="meta">
-                      <span className="chip small">{info.party}</span>
-                      {info.source === "self" && (
-                        <span className="chip small self">Self-reported</span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="meta muted">Identity hidden</span>
-                  )}
+                  {revealed ? info.name : `Candidate ${r.letter}`}
+                  {revealed && <span className="party">{info.party}</span>}
                 </span>
-                <span className="match">
-                  <span className="match-num">{r.match ?? "–"}%</span>
-                  <span className="match-bar">
-                    <span style={{ width: `${r.match ?? 0}%` }} />
-                  </span>
+                <span className="match-num">{r.match ?? "–"}%</span>
+                <span className="match-tag">
+                  {isBest ? (strong ? "Strong match" : "Close call") : ""}
                 </span>
                 <ChevronDown
-                  size={20}
+                  size={18}
                   className={expanded ? "chev open" : "chev"}
                 />
               </button>
-              {isBest && r.chance != null && (
-                <p className="chance">
-                  {race.vote_for > 1
-                    ? "In your top " + race.vote_for
-                    : "Your best match"}{" "}
-                  in {Math.round(r.chance * 100)}% of 2,000 what-ifs
+              {revealed && (
+                <p className="money-line">
+                  Spent {money(info.spending)}
+                  {info.endorsements.length > 0 &&
+                    ` · Endorsed by ${info.endorsements.join(", ")}`}
+                  {info.source === "self" && " · Self-reported"}
                 </p>
               )}
-              {revealed && (
-                <div className="money">
-                  <span className="money-label">
-                    Spent {money(info.spending)}
-                  </span>
-                  <span className="money-bar">
-                    <span
-                      style={{ width: `${(info.spending / maxSpend) * 100}%` }}
-                    />
-                  </span>
-                  {info.endorsements.length > 0 && (
-                    <span className="endorse">
-                      Endorsed by {info.endorsements.join(", ")}
-                    </span>
-                  )}
-                </div>
-              )}
               {expanded && (
-                <ul className="why">
-                  {r.why.map((w) => (
-                    <li key={w.issue} className={w.kind}>
-                      <span className="why-kind">
-                        {w.kind === "agree"
-                          ? "Agrees with you"
-                          : w.kind === "disagree"
-                            ? "Disagrees"
-                            : w.kind === "partly"
-                              ? "Partly agrees"
-                              : "Didn’t answer"}
-                      </span>
-                      <strong>{w.short}</strong>
-                      {w.reason && <q>{w.reason}</q>}
-                    </li>
-                  ))}
-                </ul>
+                <div className="details">
+                  {isBest && r.chance != null && (
+                    <p className="small">
+                      {race.vote_for > 1
+                        ? `Stays in your top ${race.vote_for}`
+                        : "Stays your top match"}{" "}
+                      in {Math.round(r.chance * 100)}% of 2,000 what-ifs, where
+                      we nudge your answers slightly.
+                    </p>
+                  )}
+                  <ul className="why">
+                    {r.why.map((w) => (
+                      <li key={w.issue} className={w.kind}>
+                        <span className="why-kind">
+                          {w.kind === "agree"
+                            ? "Agrees with you"
+                            : w.kind === "disagree"
+                              ? "Disagrees"
+                              : w.kind === "partly"
+                                ? "Partly agrees"
+                                : "Didn’t answer"}
+                        </span>
+                        <strong>{w.short}</strong>
+                        {w.reason && <q>{w.reason}</q>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </li>
           );
@@ -813,8 +778,8 @@ function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
       {revealed && best && (
         <p className="punchline">
           {race.top_spender_is_best
-            ? `Here your best match also spent the most (${money(top.spending)}). Money and policy point the same way in this race.`
-            : `Your best match spent ${money(race.reveal[best].spending)}. The biggest spender, at ${money(top.spending)}, matched you ${topMatch}%.`}
+            ? `Your best match also spent the most (${money(top.spending)}).`
+            : `Your best match spent ${money(race.reveal[best].spending)}. The biggest spender (${money(top.spending)}) matched you ${topMatch}%.`}
         </p>
       )}
     </section>
