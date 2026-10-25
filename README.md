@@ -2,9 +2,7 @@
 
 **Vote on policies, not ad budgets. · HackOHI/O 2026**
 
-> **AI assistance disclosure:** This project was designed, built, documented and tested with substantial generative AI assistance (Claude by Anthropic; earlier PollCREW work in this repository also used OpenAI Codex). The commit history records file changes; it is not evidence of unaided human authorship.
 
-Blind Ballot matches voters with every candidate on their local ballot, down to school board, township trustee and county commissioner, by what candidates say they would do. Names, parties and campaign spending stay hidden until the voter has matched. Then the reveal shows who they are, their party, their endorsements, and how much they spent.
 
 ## What's real and what's demo
 
