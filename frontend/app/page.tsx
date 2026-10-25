@@ -217,9 +217,8 @@ export default function Voter() {
               <div className="hero-text">
                 <h1>Vote on policies, not ad budgets.</h1>
                 <p className="lead">
-                  Blind Ballot matches you with every candidate on your local
-                  ballot, down to school board, by what they say they’d do.
-                  Names, parties and money stay hidden until you’ve matched.
+                  Blind Ballot aligns you with every candidate on your local
+                  ballot, down to your school board, based on your policies.
                 </p>
                 <button
                   className="primary big"
@@ -233,23 +232,23 @@ export default function Voter() {
             <ol className="how">
               <li>
                 <span>1</span>
-                <strong>Your ballot</strong>
-                Every local race on it, even treasurer and trustee
+                <strong>Your ballots</strong>
+                All of your local races in one place
               </li>
               <li>
                 <span>2</span>
-                <strong>Your priorities</strong>A few plain questions about
-                local issues
+                <strong>Your priorities</strong>
+                Answer a few questions on local issues
               </li>
               <li>
                 <span>3</span>
                 <strong>Blind match</strong>
-                Candidates ranked by policy, not name or money
+                Candidates ranked by policy
               </li>
               <li>
                 <span>4</span>
-                <strong>The reveal</strong>
-                Then see who they are, their party and spending
+                <strong>The Reveal</strong>
+                Find out who the candidates are, their party, and their spending
               </li>
             </ol>
             <section className="facts" aria-label="Why it matters">

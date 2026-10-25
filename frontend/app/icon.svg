@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <clipPath id="g"><circle cx="24" cy="21" r="16"/></clipPath>
+    <polygon id="s" points="0,-2.8 0.82,-0.89 2.66,-0.86 1.33,0.34 1.65,2.26 0,1.28 -1.65,2.26 -1.33,0.34 -2.66,-0.86 -0.82,-0.89"/>
+  </defs>
+  <!-- stand -->
+  <path d="M10 35 A19.8 19.8 0 0 0 38 7" fill="none" stroke="#F2B632" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M24 40 V43" stroke="#1D2B53" stroke-width="3.2" stroke-linecap="round"/>
+  <rect x="14" y="42.2" width="20" height="4" rx="2" fill="#1D2B53"/>
+  <!-- flag globe -->
+  <g clip-path="url(#g)">
+    <rect x="6" y="3" width="36" height="36" fill="#fff"/>
+    <rect x="6" y="5.6" width="36" height="4.2" fill="#C8243B"/>
+    <rect x="6" y="14" width="36" height="4.2" fill="#C8243B"/>
+    <rect x="6" y="22.4" width="36" height="4.2" fill="#C8243B"/>
+    <rect x="6" y="30.8" width="36" height="4.2" fill="#C8243B"/>
+    <rect x="6" y="3" width="19" height="17.8" fill="#1D2B53"/>
+    <g fill="#fff">
+      <use href="#s" x="15" y="9.5"/>
+      <use href="#s" x="21" y="9.5"/>
+      <use href="#s" x="12" y="15"/>
+      <use href="#s" x="18" y="15"/>
+    </g>
+    <g fill="none" stroke="#1D2B53" stroke-width="1.2" opacity="0.28">
+      <ellipse cx="24" cy="21" rx="7" ry="16"/>
+    </g>
+    <path d="M29.5 8 A13.5 13.5 0 0 1 36 15.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0.9"/>
+  </g>
+  <circle cx="24" cy="21" r="16" fill="none" stroke="#1D2B53" stroke-width="3"/>
+</svg>
