@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
-  ExternalLink,
   Eye,
   EyeOff,
   MapPin,
@@ -13,9 +12,14 @@ import {
   RotateCcw,
   ShieldCheck,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import { Mascot } from "@/components/Brand";
-import { DistrictsCard, StatewideRaces } from "@/components/RealBallot";
+import {
+  DistrictsCard,
+  LocalRaces,
+  StatewideRaces,
+} from "@/components/RealBallot";
 import {
   County,
   LookupResult,
@@ -26,6 +30,14 @@ import {
   loadState,
   money,
 } from "@/lib/api";
+
+const BlindBallotModel = dynamic(
+  () => import("@/components/BlindBallotModel"),
+  {
+    ssr: false,
+    loading: () => <Mascot size={200} blindfold />,
+  },
+);
 
 type Step =
   "intro" | "address" | "ballot" | "question" | "party" | "results" | "sheet";
@@ -241,7 +253,10 @@ export default function Voter() {
                   Find my ballot <ArrowRight size={20} />
                 </button>
               </div>
-              <Mascot size={200} blindfold />
+              <BlindBallotModel
+                size={260}
+                fallback={<Mascot size={200} blindfold />}
+              />
             </section>
             <ol className="how">
               <li>
@@ -372,33 +387,20 @@ export default function Voter() {
             {!county ? (
               <section className="panel step">
                 <p className="eyebrow-chip">
-                  <MapPin size={14} /> {real.districts?.county ?? `ZIP ${zip}`},
-                  Ohio
+                  <MapPin size={14} /> {real.local.county} County, Ohio
                 </p>
-                <h1>
-                  Local candidates for {real.districts?.county ?? "your county"}{" "}
-                  aren’t in Blind Ballot yet
-                </h1>
+                <h1>Your ballot in {real.local.county} County</h1>
                 <p className="lead">
-                  Your county board of elections publishes the official local
-                  candidate list and sample ballot. Counties join Blind Ballot
-                  as their candidates answer.
+                  Here are your real candidates. None have answered our
+                  questions yet, so there’s nothing to match. Want to see how
+                  matching works?
                 </p>
                 <div className="sheet-actions">
-                  <a
-                    className="secondary as-button"
-                    href={real.links.county_boards}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Find your county board <ExternalLink size={16} />
-                  </a>
                   <button
                     className="primary"
                     onClick={() => setCountyId("delaware")}
                   >
-                    Try the demo ballot (Delaware County){" "}
-                    <ArrowRight size={18} />
+                    Try the demo ballot <ArrowRight size={18} />
                   </button>
                 </div>
               </section>
@@ -455,6 +457,14 @@ export default function Voter() {
                 </button>
               </section>
             )}
+            <LocalRaces
+              real={real}
+              title={
+                county
+                  ? `Real candidates in ${real.local.county} County`
+                  : "Local races"
+              }
+            />
             <StatewideRaces real={real} />
           </>
         )}

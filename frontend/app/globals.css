@@ -1708,3 +1708,22 @@ fieldset {
 .banner h1 {
   font-size: clamp(1.3rem, 2.2vw, 1.6rem);
 }
+
+/* 3D ballot box in the hero */
+.hero .blindballot-model {
+  position: relative;
+  flex-shrink: 0;
+  cursor: grab;
+}
+.hero .blindballot-model canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+@media (max-width: 620px) {
+  .hero .blindballot-model {
+    width: 190px !important;
+    height: 190px !important;
+    align-self: center;
+  }
+}

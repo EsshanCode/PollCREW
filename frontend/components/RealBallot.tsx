@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { BadgeCheck, ExternalLink, Landmark, MapPin } from "lucide-react";
-import { Districts, LookupResult, bigMoney } from "@/lib/api";
+import { BadgeCheck, ExternalLink, Landmark, MapPin, Vote } from "lucide-react";
+import { Districts, LocalRace, LookupResult, bigMoney } from "@/lib/api";
 
 export function DistrictsCard({
   districts,
@@ -149,6 +149,101 @@ export function StatewideRaces({ real }: { real: LookupResult }) {
           Hamilton County’s (Aug 21, 2026)
         </a>
         . Write-in candidates aren’t listed.
+      </p>
+    </section>
+  );
+}
+
+const PARTY_SHORT: Record<string, string> = {
+  Democratic: "Dem",
+  Republican: "Rep",
+  Libertarian: "Lib",
+  Independent: "Ind",
+  Nonparty: "No party",
+};
+
+function raceTitle(r: LocalRace) {
+  if (["house", "senate", "congress", "appeals"].includes(r.kind) && r.district)
+    return `${r.office}, District ${r.district}`;
+  return r.office;
+}
+
+export function LocalRaces({
+  real,
+  title,
+}: {
+  real: LookupResult;
+  title: string;
+}) {
+  const local = real.local;
+  if (!local.found)
+    return (
+      <section className="real-card">
+        <h2>
+          <Vote size={20} /> {title}
+        </h2>
+        <p className="small">
+          {local.county} County hasn’t posted its November candidate list online
+          yet, so we can’t show it. Your county board of elections has it.
+        </p>
+        <a
+          className="secondary as-button"
+          href={real.links.county_boards}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Find your county board <ExternalLink size={16} />
+        </a>
+      </section>
+    );
+  return (
+    <section className="real-card statewide">
+      <div className="real-head">
+        <h2>
+          <Vote size={20} /> {title}
+        </h2>
+        <span className="real-badge">
+          <BadgeCheck size={16} /> Real candidates
+        </span>
+      </div>
+      <p className="small">
+        {local.narrowed
+          ? `${local.races.length} local races for your address.`
+          : `All ${local.races.length} local races in ${local.county} County. Add your street address to see only your districts.`}{" "}
+        No candidate has answered yet.
+      </p>
+      <div className="statewide-list">
+        {local.races.map((race, i) => (
+          <div key={`${race.office}-${race.district}-${i}`} className="sw-race">
+            <div className="sw-office">
+              <strong>{raceTitle(race)}</strong>
+              {race.kind === "part" && <span>Only some voters</span>}
+            </div>
+            <ul>
+              {race.candidates.map((c) => (
+                <li key={c.name}>
+                  <span className="sw-name">{c.name}</span>
+                  {c.party && (
+                    <span className="chip small">
+                      {PARTY_SHORT[c.party] ?? c.party}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {race.candidates.length === 1 && (
+              <p className="sw-pending">Unopposed</p>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="fine">
+        Source:{" "}
+        <a href={local.source_url} target="_blank" rel="noreferrer">
+          {local.county} County Board of Elections
+        </a>
+        {local.as_of ? ` (${local.as_of})` : ""}. Parties as printed there.
+        Write-in candidates aren’t listed.
       </p>
     </section>
   );

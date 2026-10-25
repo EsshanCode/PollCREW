@@ -170,10 +170,28 @@ export type StatewideRace = {
   money_source: string | null;
   money_available: boolean | null;
 };
+export type LocalRace = {
+  office: string;
+  kind:
+    "county" | "part" | "house" | "senate" | "congress" | "judge" | "appeals";
+  district: string | null;
+  detail: string | null;
+  note: string | null;
+  candidates: { name: string; party: string | null }[];
+};
+export type LocalBallot = {
+  county: string;
+  found: boolean;
+  source_url?: string;
+  as_of?: string | null;
+  narrowed: boolean;
+  races: LocalRace[];
+};
 export type LookupResult = {
   county: string | null;
   districts: Districts | null;
   districts_note: string | null;
+  local: LocalBallot;
   statewide: StatewideRace[];
   statewide_source: { name: string; url: string; cross_check: string };
   links: { voter_lookup: string; county_boards: string };

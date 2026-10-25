@@ -174,3 +174,18 @@ test("mobile: Franklin County by ZIP, no sideways scrolling", async ({
     ),
   ).toBeTruthy();
 });
+
+test("outside the demo counties: real local candidates by ZIP", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Find my ballot" }).click();
+  await page.getByLabel("ZIP code").fill("44308");
+  await page.getByRole("button", { name: "Find my ballot" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your ballot in Summit County" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Local races" })).toBeVisible();
+  await expect(page.getByText("Emilia Sykes")).toBeVisible();
+  await expect(page.getByText("Sherrod Brown")).toBeVisible();
+});
