@@ -251,12 +251,23 @@ export default function Voter() {
                     ballot, from county commissioner to judges, based on your
                     policies.
                   </p>
-                  <button
-                    className="primary big"
-                    onClick={() => setStep("address")}
-                  >
-                    Find my ballot <ArrowRight size={20} />
-                  </button>
+                  <div className="hero-actions">
+                    <button
+                      className="primary big"
+                      onClick={() => setStep("address")}
+                    >
+                      Find my ballot <ArrowRight size={20} />
+                    </button>
+                    {/* Temporary prank for the team. Delete this link to remove it. */}
+                    <a
+                      className="secondary as-button"
+                      href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      See who secretly funds your ballot
+                    </a>
+                  </div>
                 </div>
                 <BlindBallotModel
                   size={340}
