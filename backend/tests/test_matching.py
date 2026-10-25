@@ -133,15 +133,21 @@ def test_zip_lookup():
     assert county_for_zip("Cleveland, OH 44114") is None
 
 
-def test_api_flow_and_candidate_portal():
+def test_api_flow_and_candidate_portal(monkeypatch):
+    import main
+    from census import CensusError
+
+    def no_census(address):
+        raise CensusError("The Census Bureau couldn't find that address.")
+
+    monkeypatch.setattr(main, "districts", no_census)  # falls back to the demo ZIP list
+    monkeypatch.setattr(main, "senate_money", lambda: None)
     client = TestClient(app)
     state = client.post("/api/sessions").json()
     sid = state["session_id"]
     h = {"X-Demo-Session": sid}
     assert [c["id"] for c in state["counties"]] == ["delaware", "franklin"]
-    assert client.post("/api/lookup", json={"address": "Powell, OH 43065"}).json() == {
-        "county": "delaware"
-    }
+    assert client.post("/api/lookup", json={"address": "Powell, OH 43065"}).json()["county"] == "delaware"
     assert client.post("/api/lookup", json={"address": "Akron 44308"}).status_code == 404
 
     result = client.post(

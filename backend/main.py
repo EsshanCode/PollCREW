@@ -10,7 +10,10 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from ballots import COUNTIES, ISSUE_IDS, ISSUES, county_for_zip
+from census import CensusError, districts
+from fec import attach, senate_money
 from matching import match_ballot
+from ohio import COUNTY_BOARDS_URL, SAMPLE_BALLOT_URL, SOURCE, STATEWIDE
 
 app = FastAPI(title="Blind Ballot", version="1.0.0")
 sessions = {}
@@ -142,15 +145,54 @@ def reset(x_demo_session: Session):
         return snapshot(x_demo_session)
 
 
+DEMO_FIPS = {"39041": "delaware", "39049": "franklin"}
+
+
+def statewide():
+    money = senate_money()
+    races = []
+    for race in STATEWIDE:
+        candidates = [dict(c) for c in race["candidates"]]
+        if race.get("fec") == "senate":
+            candidates = attach(candidates, money)
+        races.append(
+            {
+                "id": race["id"],
+                "office": race["office"],
+                "detail": race["detail"],
+                "candidates": candidates,
+                "money_source": (money or {}).get("page") if race.get("fec") else None,
+                "money_available": bool(money) if race.get("fec") else None,
+            }
+        )
+    return races
+
+
 @app.post("/api/lookup")
 def lookup(body: Lookup):
-    county = county_for_zip(body.address)
-    if not county:
+    """Real districts from the Census Bureau, real statewide candidates, and the demo ballot if one exists."""
+    found = None
+    note = None
+    try:
+        found = districts(body.address)
+    except CensusError as exc:
+        if "outside Ohio" in str(exc):
+            raise HTTPException(404, str(exc)) from exc
+        note = str(exc)
+    demo = DEMO_FIPS.get(found["county_fips"]) if found else county_for_zip(body.address)
+    if not found and not demo:
         raise HTTPException(
             404,
-            "This demo covers Delaware and Franklin County, Ohio. Enter an address with a ZIP code there.",
+            note or "Enter your full Ohio street address, city and ZIP.",
         )
-    return {"county": county}
+    return {
+        "county": demo,
+        "districts": found,
+        "districts_note": None if found else "Enter a full street address to see your exact districts.",
+        "statewide": statewide(),
+        "statewide_source": SOURCE,
+        "links": {"voter_lookup": SAMPLE_BALLOT_URL, "county_boards": COUNTY_BOARDS_URL},
+    }
 
 
 @app.post("/api/match")

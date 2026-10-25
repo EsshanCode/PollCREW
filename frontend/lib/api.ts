@@ -139,3 +139,51 @@ export async function loadState(onWaiting?: () => void): Promise<State> {
 
 export const money = (n: number) =>
   n >= 1000 ? `$${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}K` : `$${n}`;
+
+export type Districts = {
+  matched_address: string | null;
+  county: string;
+  county_fips: string;
+  city: string | null;
+  township: string | null;
+  school_district: string | null;
+  ohio_senate: string | null;
+  ohio_house: string | null;
+  us_house: string | null;
+  source: string;
+};
+export type StatewideRace = {
+  id: string;
+  office: string;
+  detail: string;
+  candidates: {
+    name: string;
+    party: string;
+    running_mate: string | null;
+    money?: {
+      receipts: number | null;
+      disbursements: number | null;
+      cash_on_hand: number | null;
+      as_of: string | null;
+    } | null;
+  }[];
+  money_source: string | null;
+  money_available: boolean | null;
+};
+export type LookupResult = {
+  county: string | null;
+  districts: Districts | null;
+  districts_note: string | null;
+  statewide: StatewideRace[];
+  statewide_source: { name: string; url: string; cross_check: string };
+  links: { voter_lookup: string; county_boards: string };
+};
+
+export const bigMoney = (n: number | null | undefined) =>
+  n == null
+    ? "–"
+    : n >= 1_000_000
+      ? `$${(n / 1_000_000).toFixed(1)}M`
+      : n >= 1000
+        ? `$${Math.round(n / 1000)}K`
+        : `$${Math.round(n)}`;

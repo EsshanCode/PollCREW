@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
+  ExternalLink,
   Eye,
   EyeOff,
   MapPin,
@@ -14,8 +15,10 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import { Mascot } from "@/components/Brand";
+import { DistrictsCard, StatewideRaces } from "@/components/RealBallot";
 import {
   County,
+  LookupResult,
   MatchResult,
   RaceResult,
   State,
@@ -79,6 +82,7 @@ export default function Voter() {
   const [step, setStep] = useState<Step>("intro");
   const [address, setAddress] = useState("");
   const [countyId, setCountyId] = useState("");
+  const [real, setReal] = useState<LookupResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [qIndex, setQIndex] = useState(0);
   const [party, setParty] = useState<string | null>(null);
@@ -112,10 +116,11 @@ export default function Voter() {
     setError("");
     setBusy(true);
     try {
-      const found = await api<{ county: string }>("/lookup", "", "POST", {
+      const found = await api<LookupResult>("/lookup", "", "POST", {
         address: text,
       });
-      setCountyId(found.county);
+      setReal(found);
+      setCountyId(found.county ?? "");
       setAddress(text);
       setStep("ballot");
     } catch (e) {
@@ -166,6 +171,7 @@ export default function Voter() {
     setResult(null);
     setRevealed(false);
     setCountyId("");
+    setReal(null);
     setAddress("");
     setStep("intro");
   }
@@ -269,7 +275,7 @@ export default function Voter() {
             <h1>Where do you vote?</h1>
             <p className="lead">
               Your address decides which races are on your ballot. It’s only
-              used for this lookup.
+              used for this lookup. Works for any Ohio address.
             </p>
             <form
               className="address"
@@ -278,13 +284,13 @@ export default function Voter() {
                 findBallot(address);
               }}
             >
-              <label htmlFor="address">Home address or ZIP code</label>
+              <label htmlFor="address">Street address, city and ZIP</label>
               <div className="address-row">
                 <input
                   id="address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. 43035"
+                  placeholder="e.g. 2840 E Orange Rd, Lewis Center, OH 43035"
                   autoComplete="street-address"
                 />
                 <button
@@ -296,7 +302,8 @@ export default function Voter() {
               </div>
             </form>
             <p className="fine">
-              Demo covers Delaware and Franklin County, Ohio. Try:
+              Full blind matching (demo candidates) in Delaware and Franklin
+              County. Try:
             </p>
             <div className="chips">
               {state.counties.map((c) => (
@@ -312,57 +319,99 @@ export default function Voter() {
           </section>
         )}
 
-        {step === "ballot" && county && (
-          <section className="panel step">
-            <p className="eyebrow-chip">
-              <MapPin size={14} /> {county.name}, Ohio
-            </p>
-            <h1>
-              Your ballot has {county.races.length + county.measures.length}{" "}
-              local choices
-            </h1>
-            <p className="lead">
-              These are the races people most often skip or guess on. You’ll
-              answer {questions.length} quick questions about the issues these
-              offices decide.
-            </p>
-            <ul className="ballot-list">
-              {county.races.map((r) => (
-                <li key={r.id}>
-                  <div>
-                    <strong>{r.office}</strong>
-                    <span>{r.what}</span>
-                  </div>
-                  <small>
-                    {r.candidates} candidates
-                    {r.vote_for > 1 ? `, vote for ${r.vote_for}` : ""}
-                    {!r.partisan ? ", no party on ballot" : ""}
-                  </small>
-                </li>
-              ))}
-              {county.measures.map((m) => (
-                <li key={m.id} className="measure">
-                  <div>
-                    <strong>{m.title}</strong>
-                    <span>{m.what}</span>
-                  </div>
-                  <small>Yes or no</small>
-                </li>
-              ))}
-            </ul>
-            <p className="demo-note">
-              Demo ballot: real offices, fictional candidates.
-            </p>
-            <button
-              className="primary big"
-              onClick={() => {
-                setQIndex(0);
-                setStep("question");
-              }}
-            >
-              Start the questions <ArrowRight size={20} />
-            </button>
-          </section>
+        {step === "ballot" && real && (
+          <>
+            <DistrictsCard
+              districts={real.districts}
+              note={real.districts_note}
+            />
+            {!county ? (
+              <section className="panel step">
+                <p className="eyebrow-chip">
+                  <MapPin size={14} /> {real.districts?.county}, Ohio
+                </p>
+                <h1>
+                  Local candidates for {real.districts?.county} aren’t in Blind
+                  Ballot yet
+                </h1>
+                <p className="lead">
+                  Your county board of elections publishes the official local
+                  candidate list and sample ballot. Counties join Blind Ballot
+                  as their candidates answer.
+                </p>
+                <div className="sheet-actions">
+                  <a
+                    className="secondary as-button"
+                    href={real.links.county_boards}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Find your county board <ExternalLink size={16} />
+                  </a>
+                  <button
+                    className="primary"
+                    onClick={() => setCountyId("delaware")}
+                  >
+                    Try the demo ballot (Delaware County){" "}
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+              </section>
+            ) : (
+              <section className="panel step">
+                <p className="eyebrow-chip">
+                  <MapPin size={14} /> {county.name}, Ohio
+                </p>
+                <h1>
+                  Your ballot has {county.races.length + county.measures.length}{" "}
+                  local choices
+                </h1>
+                <p className="lead">
+                  These are the races people most often skip or guess on. You’ll
+                  answer {questions.length} quick questions about the issues
+                  these offices decide.
+                </p>
+                <ul className="ballot-list">
+                  {county.races.map((r) => (
+                    <li key={r.id}>
+                      <div>
+                        <strong>{r.office}</strong>
+                        <span>{r.what}</span>
+                      </div>
+                      <small>
+                        {r.candidates} candidates
+                        {r.vote_for > 1 ? `, vote for ${r.vote_for}` : ""}
+                        {!r.partisan ? ", no party on ballot" : ""}
+                      </small>
+                    </li>
+                  ))}
+                  {county.measures.map((m) => (
+                    <li key={m.id} className="measure">
+                      <div>
+                        <strong>{m.title}</strong>
+                        <span>{m.what}</span>
+                      </div>
+                      <small>Yes or no</small>
+                    </li>
+                  ))}
+                </ul>
+                <p className="demo-note">
+                  Demo local ballot: real offices, fictional candidates, so you
+                  can try the full blind match.
+                </p>
+                <button
+                  className="primary big"
+                  onClick={() => {
+                    setQIndex(0);
+                    setStep("question");
+                  }}
+                >
+                  Start the questions <ArrowRight size={20} />
+                </button>
+              </section>
+            )}
+            <StatewideRaces real={real} />
+          </>
         )}
 
         {step === "question" && question && (

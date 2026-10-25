@@ -58,6 +58,11 @@ test("voter: blind match, reveal, and ballot sheet", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Your ballot has 4 local choices" }),
   ).toBeVisible();
+  // Real statewide races appear for every Ohio address.
+  await expect(
+    page.getByRole("heading", { name: "Statewide races on every Ohio ballot" }),
+  ).toBeVisible();
+  await expect(page.getByText("Sherrod Brown")).toBeVisible();
   await page.getByRole("button", { name: "Start the questions" }).click();
   await answerAll(page, 0);
   await page.getByRole("button", { name: "Usually Republican" }).click();
@@ -143,7 +148,7 @@ test("mobile: Franklin County by ZIP, no sideways scrolling", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.getByRole("button", { name: "Find my ballot" }).click();
-  await page.getByLabel("Home address or ZIP code").fill("43210");
+  await page.getByLabel("Street address, city and ZIP").fill("43210");
   await page.getByRole("button", { name: "Find my ballot" }).click();
   await expect(
     page.getByRole("heading", { name: "Your ballot has 4 local choices" }),

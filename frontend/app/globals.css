@@ -1331,3 +1331,147 @@ fieldset {
     grid-column: 1 / -1;
   }
 }
+
+/* Real data */
+.real-card {
+  display: grid;
+  gap: 12px;
+  padding: 20px 22px;
+  background: #fff;
+  border: 2.5px solid var(--navy);
+  border-radius: 22px;
+}
+.real-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.real-head h2,
+.real-card > h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.real-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--good-soft);
+  border: 2px solid var(--good);
+  color: var(--good);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.districts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.districts div {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--sky);
+}
+.districts dt {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.districts dd {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.statewide-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+.sw-race {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 2px solid var(--line);
+}
+.sw-office {
+  display: grid;
+}
+.sw-office strong {
+  font-family: var(--display);
+  font-weight: 600;
+}
+.sw-office span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.sw-race ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.sw-race li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 0.95rem;
+}
+.sw-name {
+  font-weight: 700;
+}
+.sw-name small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.sw-pending {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.sw-money {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #7a5400;
+}
+.sw-money-row {
+  display: grid;
+  gap: 6px;
+}
+.mini-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 2px solid var(--navy);
+  background: var(--gold-soft);
+  color: var(--navy);
+  font-weight: 700;
+  cursor: pointer;
+}
+.mini-toggle .toggle-track {
+  width: 44px;
+  height: 26px;
+}
+.mini-toggle .toggle-knob {
+  width: 17px;
+  height: 17px;
+}
+.mini-toggle.on .toggle-track {
+  background: var(--red);
+}
+.mini-toggle.on .toggle-knob {
+  transform: translateX(18px);
+}
