@@ -1,6 +1,7 @@
 """Blind Ballot API: local ballots, money-blind policy matching, and a candidate portal."""
 
 import copy
+import os
 import re
 import threading
 import time
@@ -21,6 +22,7 @@ app = FastAPI(title="Blind Ballot", version="1.0.0")
 sessions = {}
 mutex = threading.RLock()
 Session = Annotated[str, Header(alias="X-Demo-Session")]
+TEAM_KEY = os.getenv("TEAM_KEY", "")
 PARTIES = ["Democratic", "Republican", "Independent", "Libertarian", "Green", "Nonpartisan"]
 
 
@@ -41,6 +43,11 @@ class MatchRequest(BaseModel):
         if unknown:
             raise ValueError(f"Unknown issue: {sorted(unknown)[0]}")
         return value
+
+
+class Feedback(BaseModel):
+    same: Literal["yes", "no", "unsure"]
+    confusing: str = Field(default="", max_length=200)
 
 
 class Lookup(BaseModel):
@@ -114,6 +121,42 @@ def snapshot(sid):
             for c in counties.values()
         ],
     }
+
+
+# Optional tester feedback. Anonymous, never linked to anyone's issue answers.
+# Kept in memory only: a server restart clears it.
+feedback = {"yes": 0, "no": 0, "unsure": 0, "notes": []}
+
+
+@app.post("/api/feedback")
+def add_feedback(body: Feedback):
+    with mutex:
+        if sum(feedback[k] for k in ("yes", "no", "unsure")) >= 5000:
+            raise HTTPException(503, "Thanks! We have plenty of feedback for now.")
+        feedback[body.same] += 1
+        note = body.confusing.strip()
+        if note:
+            feedback["notes"] = (feedback["notes"] + [note])[-200:]
+        return feedback_summary()
+
+
+@app.get("/api/feedback/summary")
+def feedback_summary():
+    """Counts only. Free-text notes are for the team and are never shown publicly."""
+    total = feedback["yes"] + feedback["no"] + feedback["unsure"]
+    return {
+        "total": total,
+        "same": feedback["yes"],
+        "changed": feedback["no"],
+        "unsure": feedback["unsure"],
+    }
+
+
+@app.get("/api/feedback/notes")
+def feedback_notes(x_team_key: Annotated[str, Header(alias="X-Team-Key")] = ""):
+    if not TEAM_KEY or x_team_key != TEAM_KEY:
+        raise HTTPException(404, "Not found")
+    return {"notes": feedback["notes"]}
 
 
 @app.get("/api/health")

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { ArrowDown, ExternalLink } from "lucide-react";
 import Header from "@/components/Header";
-import { FEEDBACK } from "@/lib/feedback";
+import { LiveFeedback } from "@/components/Feedback";
+import { FEEDBACK, FEEDBACK_SUMMARY } from "@/lib/feedback";
 
 export const metadata: Metadata = {
   title: "How it works · Blind Ballot",
@@ -233,19 +234,19 @@ export default function About() {
           </ol>
         </section>
 
-        {FEEDBACK.length > 0 && (
-          <section className="panel">
-            <h2>What testers told us</h2>
-            <div className="qa-list">
-              {FEEDBACK.map((f) => (
-                <blockquote key={f.quote} className="qa">
-                  <span>“{f.quote}”</span>
-                  <cite>{f.who}</cite>
-                </blockquote>
-              ))}
-            </div>
-          </section>
-        )}
+        <section className="panel">
+          <h2>What testers told us</h2>
+          <p className="lead">{FEEDBACK_SUMMARY}</p>
+          <div className="qa-list">
+            {FEEDBACK.map((f) => (
+              <blockquote key={f.quote} className="qa">
+                <span>“{f.quote}”</span>
+                <cite>{f.who}</cite>
+              </blockquote>
+            ))}
+          </div>
+          <LiveFeedback />
+        </section>
 
         <section className="panel">
           <h2>Where the data comes from</h2>

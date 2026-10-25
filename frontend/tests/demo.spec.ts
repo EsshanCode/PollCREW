@@ -104,6 +104,14 @@ test("voter: blind match, reveal, and ballot sheet", async ({ page }) => {
     page.getByRole("heading", { name: "Delaware County, Ohio" }),
   ).toBeVisible();
   await expect(page.locator(".pick")).toHaveCount(5);
+  // Optional anonymous feedback, counts only.
+  await page
+    .getByRole("radio", { name: "No, I’d have picked differently" })
+    .click();
+  await page.getByRole("button", { name: "Send feedback" }).click();
+  await expect(
+    page.getByText("Thanks for testing Blind Ballot."),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -202,4 +210,9 @@ test("how it works page explains the method and sources", async ({ page }) => {
     page.getByRole("heading", { name: "What already exists" }),
   ).toBeVisible();
   await expect(page.getByText("Blind match", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("I never even knew the candidates in my county!", {
+      exact: false,
+    }),
+  ).toBeVisible();
 });

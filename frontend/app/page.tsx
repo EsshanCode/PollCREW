@@ -15,6 +15,7 @@ import {
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import { Mascot } from "@/components/Brand";
+import { FeedbackCard } from "@/components/Feedback";
 import {
   DistrictsCard,
   LocalRaces,
@@ -244,7 +245,8 @@ export default function Voter() {
                 <h1>Vote on policies, not ad budgets.</h1>
                 <p className="lead">
                   Blind Ballot aligns you with every candidate on your local
-                  ballot, down to your school board, based on your policies.
+                  ballot, from county commissioner to judges, based on your
+                  policies.
                 </p>
                 <button
                   className="primary big"
@@ -752,6 +754,7 @@ export default function Voter() {
                 <ShieldCheck size={18} /> Running for office? Add yourself
               </a>
             </div>
+            <FeedbackCard />
           </section>
         )}
       </main>

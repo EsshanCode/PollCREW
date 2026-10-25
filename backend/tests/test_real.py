@@ -202,3 +202,16 @@ def test_local_races_from_county_lists():
         for r in v["races"]:
             for c in r["candidates"]:
                 assert set(c) == {"name", "party"}
+
+
+def test_feedback_counts_only(monkeypatch):
+    client = TestClient(main.app)
+    main.feedback.update(yes=0, no=0, unsure=0, notes=[])
+    client.post("/api/feedback", json={"same": "no", "confusing": "What is a levy?"})
+    client.post("/api/feedback", json={"same": "yes"})
+    summary = client.get("/api/feedback/summary").json()
+    assert summary == {"total": 2, "same": 1, "changed": 1, "unsure": 0}
+    assert "What is a levy?" not in str(summary)  # notes never public
+    assert client.get("/api/feedback/notes").status_code == 404
+    assert client.post("/api/feedback", json={"same": "maybe"}).status_code == 422
+    main.feedback.update(yes=0, no=0, unsure=0, notes=[])

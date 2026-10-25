@@ -1877,3 +1877,75 @@ a.tool:hover {
     white-space: nowrap;
   }
 }
+
+/* Tester feedback */
+.feedback-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 18px 20px;
+  border: 2.5px dashed var(--navy);
+  border-radius: 18px;
+  background: var(--sky);
+}
+.feedback-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.15rem;
+}
+.feedback-card fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.feedback-card legend {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.fb-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fb-choice {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--navy);
+  background: #fff;
+  color: var(--navy);
+  font-weight: 700;
+  cursor: pointer;
+}
+.fb-choice.on {
+  background: var(--navy);
+  color: #fff;
+}
+.feedback-card label {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.feedback-card input {
+  min-height: 46px;
+}
+.feedback-card .primary {
+  justify-self: start;
+}
+.feedback-card.done {
+  border-style: solid;
+}
+.live-feedback {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--gold-soft);
+  font-size: 0.95rem;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
