@@ -1,199 +1,119 @@
+"""Blind Ballot API: local ballots, money-blind policy matching, and a candidate portal."""
+
 import copy
-import os
 import threading
 import time
 import uuid
-from typing import Annotated
-from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, model_validator
-from data import SKILLS, dataset
-from engine import PlanError, budget_curve, coverage_stats, evaluate, solve, simulate
-from extraction import extract
-from polling import PollingError, build_jurisdiction, configured, fetch_polling_places
+from typing import Annotated, Literal, Optional
 
-app = FastAPI(title="PollCREW synthetic demo", version="0.1.0")
+from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel, Field, field_validator
+
+from ballots import COUNTIES, ISSUE_IDS, ISSUES, county_for_zip
+from matching import match_ballot
+
+app = FastAPI(title="Blind Ballot", version="1.0.0")
 sessions = {}
 mutex = threading.RLock()
 Session = Annotated[str, Header(alias="X-Demo-Session")]
+PARTIES = ["Democratic", "Republican", "Independent", "Libertarian", "Green", "Nonpartisan"]
 
 
-class SkillUpdate(BaseModel):
-    confirmed_skills: list[str]
-    rejected_skills: list[str] = []
-    experience: str = Field(default="", max_length=4000)
-    trained: bool
-    available_start: int = Field(ge=0, le=23)
-    available_end: int = Field(ge=1, le=24)
-    max_travel_km: float = Field(ge=0, le=500)
-
-    @model_validator(mode="after")
-    def validate_fields(self):
-        if not set(self.confirmed_skills + self.rejected_skills).issubset(SKILLS):
-            raise ValueError("Unknown skill")
-        if set(self.confirmed_skills) & set(self.rejected_skills):
-            raise ValueError("A rejected skill cannot be confirmed")
-        if self.available_end <= self.available_start:
-            raise ValueError("Availability end must be after start")
-        return self
+class Answer(BaseModel):
+    stance: Optional[int] = Field(default=None, ge=-2, le=2)
+    weight: int = Field(default=2, ge=0, le=3)
 
 
-class Extraction(BaseModel):
-    text: str = Field(min_length=1, max_length=4000)
+class MatchRequest(BaseModel):
+    county: str
+    answers: dict[str, Answer]
+    usual_party: Optional[Literal["Democratic", "Republican", "Independent", "None"]] = None
+
+    @field_validator("answers")
+    @classmethod
+    def known(cls, value):
+        unknown = set(value) - set(ISSUE_IDS)
+        if unknown:
+            raise ValueError(f"Unknown issue: {sorted(unknown)[0]}")
+        return value
 
 
-class Requirement(BaseModel):
-    role: str
-    desired: int = Field(ge=0, le=20)
-    minimum: int = Field(ge=0, le=20)
-    skills: list[str]
-    training: bool
-
-    @model_validator(mode="after")
-    def valid(self):
-        if self.minimum > self.desired or not set(self.skills).issubset(SKILLS):
-            raise ValueError(
-                "Minimum cannot exceed desired and skills must be recognized"
-            )
-        return self
+class Lookup(BaseModel):
+    address: str = Field(min_length=3, max_length=200)
 
 
-class LocationUpdate(BaseModel):
-    requirements: list[Requirement] = Field(min_length=1, max_length=3)
-    arrival_per_hour: float = Field(ge=0, le=500)
-    service_minutes: float = Field(gt=0, le=30)
-    start: int = Field(ge=0, le=23)
-    end: int = Field(ge=1, le=24)
-
-    @model_validator(mode="after")
-    def valid(self):
-        roles = [r.role for r in self.requirements]
-        if (
-            set(roles) != {"Check-in", "Voter support", "Site lead"}
-            or len(roles) != 3
-            or self.end <= self.start
-        ):
-            raise ValueError("Provide all three distinct roles and an end after start")
-        return self
+class CandidateAnswer(BaseModel):
+    stance: Optional[int] = Field(default=None, ge=-2, le=2)
+    reason: str = Field(default="", max_length=160)
 
 
-class BudgetUpdate(BaseModel):
-    surge_budget: int = Field(ge=0, le=20)
+class CandidateIn(BaseModel):
+    county: str
+    race_id: str
+    name: str = Field(min_length=2, max_length=60)
+    party: Literal[
+        "Democratic", "Republican", "Independent", "Libertarian", "Green", "Nonpartisan"
+    ]
+    spending: int = Field(default=0, ge=0, le=50_000_000)
+    endorsements: list[str] = Field(default=[], max_length=3)
+    answers: dict[str, CandidateAnswer]
+
+    @field_validator("endorsements")
+    @classmethod
+    def short(cls, value):
+        value = [e.strip() for e in value if e.strip()]
+        if any(len(e) > 60 for e in value):
+            raise ValueError("Keep each endorsement under 60 characters")
+        return value
 
 
-class PollingImport(BaseModel):
-    addresses: list[str] = Field(min_length=1, max_length=25)
-    name: str = Field(min_length=1, max_length=80)
-    state: str = Field(min_length=2, max_length=40)
-    code: str = Field(min_length=2, max_length=2)
-    election_id: int | None = None
-
-    @model_validator(mode="after")
-    def clean(self):
-        self.addresses = [a.strip() for a in self.addresses if a.strip()][:25]
-        if not self.addresses:
-            raise ValueError("Enter at least one address")
-        return self
-
-
-class Approval(BaseModel):
-    revision: int
-
-
-@app.exception_handler(PlanError)
-def plan_error(request, exc):
-    return JSONResponse(status_code=409, content={"detail": str(exc)})
-
-
-def state(sid, jid=None):
+def session(sid):
     if sid not in sessions:
         raise HTTPException(404, "Demo session expired. Reload to start a fresh demo.")
     sessions[sid]["touched"] = time.monotonic()
-    data = sessions[sid]["data"]
-    if jid is None:
-        return data
-    if jid not in data:
-        raise HTTPException(404, "Unknown jurisdiction")
-    return data[jid]
+    return sessions[sid]
 
 
 def snapshot(sid):
-    return copy.deepcopy(
-        {
-            "jurisdictions": list(state(sid).values()),
-            "skills": SKILLS,
-            "extraction_mode": os.getenv("EXTRACTION_MODE", "offline"),
-            "matching_mode": os.getenv("EMBEDDING_MODE", "sentence-transformers"),
-            "synthetic": True,
-            "polling_api_configured": configured(),
-        }
-    )
-
-
-def require_draft(data):
-    if data["plan"]:
-        raise HTTPException(
-            409,
-            "Reset this demo before editing requirements or worker profiles so approved assignments stay consistent.",
-        )
-
-
-def disrupt(data, ids, event):
-    before = copy.deepcopy(data["plan"])
-    for w in data["workers"]:
-        if w["id"] in ids:
-            w["cancelled"] = True
-    remaining = [a for a in before["assignments"] if a["worker_id"] not in ids]
-    stats = coverage_stats(data, remaining)
-    data["before"] = before
-    data["plan"]["assignments"] = remaining
-    data["plan"].update(
-        approved=False,
-        disrupted=True,
-        coverage=stats["filled"] / before["needed"],
-        surge_assigned=stats["surge_assigned"],
-        simulation=simulate(data, remaining),
-    )
-    data["plan"]["gaps"] = []
-    for loc in data["locations"]:
-        for req in loc["requirements"]:
-            count = sum(
-                a["location_id"] == loc["id"] and a["role"] == req["role"]
-                for a in remaining
-            )
-            if count < req["desired"]:
-                data["plan"]["gaps"].append(
+    counties = session(sid)["counties"]
+    return {
+        "session_id": sid,
+        "issues": ISSUES,
+        "parties": PARTIES,
+        "counties": [
+            {
+                "id": c["id"],
+                "name": c["name"],
+                "place": c["place"],
+                "sample_address": c["sample_address"],
+                "races": [
                     {
-                        "location": loc["name"],
-                        "role": req["role"],
-                        "unfilled": req["desired"] - count,
-                        "minimum_shortfall": max(0, req["minimum"] - count),
+                        "id": r["id"],
+                        "office": r["office"],
+                        "what": r["what"],
+                        "vote_for": r["vote_for"],
+                        "partisan": r["partisan"],
+                        "issues": r["issues"],
+                        "candidates": len(r["candidates"]),
+                        "self_reported": sum(
+                            1 for x in r["candidates"] if x["source"] == "self"
+                        ),
                     }
-                )
-    data["plan"]["minimums_met"] = all(
-        g["minimum_shortfall"] == 0 for g in data["plan"]["gaps"]
-    )
-    data["plan"]["status"] = "DISRUPTED"
-    data["plan"]["match_quality"] = (
-        round(sum(a["score"] for a in remaining) / len(remaining), 1)
-        if remaining
-        else 0
-    )
-    data["impact"] = {
-        "cancelled_ids": list(ids),
-        "lost_assignments": len(before["assignments"]) - len(remaining),
-        "preserved": len(remaining),
-        "before_risk": before["simulation"]["risk_percent"],
-        "after_risk": data["plan"]["simulation"]["risk_percent"],
-        "recovered": None,
+                    for r in c["races"]
+                ],
+                "measures": [
+                    {"id": m["id"], "title": m["title"], "what": m["what"]}
+                    for m in c["measures"]
+                ],
+            }
+            for c in counties.values()
+        ],
     }
-    data["revision"] += 1
-    data["events"].append(event)
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "synthetic": True}
+    return {"status": "ok"}
 
 
 @app.post("/api/sessions")
@@ -202,13 +122,11 @@ def create_session():
         for key in list(sessions):
             if time.monotonic() - sessions[key]["touched"] > 86400:
                 del sessions[key]
-        if len(sessions) >= 100:
-            raise HTTPException(
-                503, "Demo session capacity reached. Restart the local demo server."
-            )
+        if len(sessions) >= 500:
+            raise HTTPException(503, "Demo is busy. Try again in a minute.")
         sid = str(uuid.uuid4())
-        sessions[sid] = {"data": dataset(), "imports": {}, "touched": time.monotonic()}
-        return {"session_id": sid, **snapshot(sid)}
+        sessions[sid] = {"counties": copy.deepcopy(COUNTIES), "touched": time.monotonic()}
+        return snapshot(sid)
 
 
 @app.get("/api/state")
@@ -220,187 +138,67 @@ def get_state(x_demo_session: Session):
 @app.post("/api/reset")
 def reset(x_demo_session: Session):
     with mutex:
-        state(x_demo_session)
-        fresh = dataset()
-        fresh.update(copy.deepcopy(sessions[x_demo_session].get("imports", {})))
-        sessions[x_demo_session]["data"] = fresh
+        session(x_demo_session)["counties"] = copy.deepcopy(COUNTIES)
         return snapshot(x_demo_session)
 
 
-@app.post("/api/extract")
-def extract_skills(body: Extraction, x_demo_session: Session):
-    with mutex:
-        state(x_demo_session)
-    try:
-        return extract(body.text)
-    except ValueError as exc:
-        raise HTTPException(503, str(exc))
-
-
-@app.put("/api/jurisdictions/{jid}/workers/{wid}")
-def update_worker(jid: str, wid: str, body: SkillUpdate, x_demo_session: Session):
-    with mutex:
-        data = state(x_demo_session, jid)
-        require_draft(data)
-        w = next((w for w in data["workers"] if w["id"] == wid), None)
-        if w is None:
-            raise HTTPException(404, "Worker not found")
-        w.update(body.model_dump())
-        return snapshot(x_demo_session)
-
-
-@app.put("/api/jurisdictions/{jid}/locations/{lid}")
-def update_location(jid: str, lid: str, body: LocationUpdate, x_demo_session: Session):
-    with mutex:
-        data = state(x_demo_session, jid)
-        require_draft(data)
-        loc = next((loc for loc in data["locations"] if loc["id"] == lid), None)
-        if loc is None:
-            raise HTTPException(404, "Location not found")
-        loc.update(body.model_dump())
-        return snapshot(x_demo_session)
-
-
-@app.put("/api/jurisdictions/{jid}/budget")
-def update_budget(jid: str, body: BudgetUpdate, x_demo_session: Session):
-    with mutex:
-        data = state(x_demo_session, jid)
-        require_draft(data)
-        data["surge_budget"] = body.surge_budget
-        return snapshot(x_demo_session)
-
-
-@app.post("/api/jurisdictions/{jid}/generate")
-def generate(jid: str, x_demo_session: Session):
-    with mutex:
-        data = state(x_demo_session, jid)
-        require_draft(data)
-        plan = evaluate(data, solve(data))
-        baseline = evaluate(data, solve(data, baseline=True))
-        curve = budget_curve(data, max(8, data["surge_budget"]))
-        data.update(
-            plan=plan, baseline=baseline, curve=curve, revision=data["revision"] + 1
+@app.post("/api/lookup")
+def lookup(body: Lookup):
+    county = county_for_zip(body.address)
+    if not county:
+        raise HTTPException(
+            404,
+            "This demo covers Delaware and Franklin County, Ohio. Enter an address with a ZIP code there.",
         )
-        data["events"].append("Initial plan generated; ready for coordinator review.")
-        return snapshot(x_demo_session)
+    return {"county": county}
 
 
-@app.post("/api/jurisdictions/{jid}/approve")
-def approve(jid: str, body: Approval, x_demo_session: Session):
+@app.post("/api/match")
+def match(body: MatchRequest, x_demo_session: Session):
+    """Answers are used for this response only. They are never stored."""
     with mutex:
-        data = state(x_demo_session, jid)
-        if (
-            not data["plan"]
-            or body.revision != data["revision"]
-            or data["plan"].get("disrupted")
-        ):
-            raise HTTPException(
-                409,
-                "The plan changed or has unresolved cancellations. Review the latest revision before approval.",
-            )
-        data["plan"]["approved"] = True
-        data["events"].append(f"Coordinator approved revision {data['revision']}.")
-        return snapshot(x_demo_session)
+        counties = session(x_demo_session)["counties"]
+        if body.county not in counties:
+            raise HTTPException(404, "Unknown county")
+        county = copy.deepcopy(counties[body.county])
+    answers = {k: v.model_dump() for k, v in body.answers.items()}
+    return match_ballot(county, answers, ISSUES, body.usual_party)
 
 
-@app.post("/api/jurisdictions/{jid}/cancel")
-def cancel(jid: str, x_demo_session: Session):
+@app.post("/api/candidates")
+def add_candidate(body: CandidateIn, x_demo_session: Session):
     with mutex:
-        data = state(x_demo_session, jid)
-        if not data["plan"] or not data["plan"]["approved"] or data["impact"]:
+        counties = session(x_demo_session)["counties"]
+        county = counties.get(body.county)
+        race = next((r for r in county["races"] if r["id"] == body.race_id), None) if county else None
+        if not race:
+            raise HTTPException(404, "Unknown race")
+        if len(race["candidates"]) >= 8:
+            raise HTTPException(409, "This demo race already has 8 candidates.")
+        extra = set(body.answers) - set(race["issues"])
+        if extra:
+            raise HTTPException(422, "Answer only the issues this office handles.")
+        if not race["partisan"] and body.party != "Nonpartisan":
             raise HTTPException(
-                409,
-                "Approve the initial plan first. Cancellation demo runs once per reset.",
+                422, "This is a nonpartisan race in Ohio. Choose Nonpartisan and list any party endorsement instead."
             )
-        check_in = [a for a in data["plan"]["assignments"] if a["role"] == "Check-in"]
-        ordered = sorted(check_in, key=lambda a: (a["location_id"], a["worker_id"]))
-        ids = [a["worker_id"] for a in ordered[:3]]
-        if len(ids) < 3:
-            raise HTTPException(
-                409, "This scenario requires at least three assigned check-in workers."
-            )
-        disrupt(
-            data,
-            ids,
-            "Three synthetic check-in workers cancelled. Remaining approved assignments are locked.",
+        cid = f"self-{uuid.uuid4().hex[:8]}"
+        race["candidates"].append(
+            {
+                "id": cid,
+                "name": body.name.strip(),
+                "party": body.party,
+                "spending": body.spending,
+                "endorsements": body.endorsements,
+                "answers": {
+                    i: (
+                        body.answers[i].model_dump()
+                        if i in body.answers
+                        else {"stance": None, "reason": ""}
+                    )
+                    for i in race["issues"]
+                },
+                "source": "self",
+            }
         )
-        return snapshot(x_demo_session)
-
-
-@app.post("/api/jurisdictions/{jid}/workers/{wid}/unavailable")
-def worker_unavailable(jid: str, wid: str, x_demo_session: Session):
-    with mutex:
-        data = state(x_demo_session, jid)
-        worker = next((w for w in data["workers"] if w["id"] == wid), None)
-        if worker is None:
-            raise HTTPException(404, "Worker not found")
-        if worker["cancelled"]:
-            return snapshot(x_demo_session)
-        plan = data["plan"]
-        assigned = plan and any(a["worker_id"] == wid for a in plan["assignments"])
-        if assigned and (not plan["approved"] or plan.get("disrupted")):
-            raise HTTPException(
-                409,
-                "Your coordinator is updating the plan right now. Try again in a minute.",
-            )
-        if assigned:
-            disrupt(
-                data,
-                [wid],
-                f"{worker['name']} reported they cannot work. Remaining approved assignments are locked.",
-            )
-        else:
-            worker["cancelled"] = True
-            data["events"].append(f"{worker['name']} marked themselves unavailable.")
-        return snapshot(x_demo_session)
-
-
-@app.post("/api/polling-places/import")
-def import_polling_places(body: PollingImport, x_demo_session: Session):
-    with mutex:
-        state(x_demo_session)
-    try:
-        places, lookups = fetch_polling_places(body.addresses, body.election_id)
-        imported = build_jurisdiction(places, body.name, body.state, body.code)
-    except PollingError as exc:
-        raise HTTPException(503, str(exc))
-    jid = imported["jurisdiction"]["id"]
-    with mutex:
-        session = sessions.get(x_demo_session)
-        if session is None:
-            raise HTTPException(
-                404, "Demo session expired. Reload to start a fresh demo."
-            )
-        session.setdefault("imports", {})[jid] = copy.deepcopy(imported)
-        session["data"][jid] = imported
-        result = snapshot(x_demo_session)
-    result["import"] = {"jurisdiction_id": jid, "lookups": lookups}
-    return result
-
-
-@app.post("/api/jurisdictions/{jid}/recover")
-def recover(jid: str, x_demo_session: Session):
-    with mutex:
-        data = state(x_demo_session, jid)
-        if not data["plan"] or not data["plan"].get("disrupted"):
-            raise HTTPException(409, "Run the cancellation scenario before recovery.")
-        locked = data["plan"]["assignments"]
-        revised = evaluate(data, solve(data, locked=locked))
-        ids = data["impact"]["cancelled_ids"]
-        base_locked = [
-            a for a in data["baseline"]["assignments"] if a["worker_id"] not in ids
-        ]
-        baseline_recovery = evaluate(
-            data, solve(data, locked=base_locked, baseline=True)
-        )
-        baseline_affected = len(data["baseline"]["assignments"]) - len(base_locked)
-        data["impact"].update(
-            recovered=len(revised["assignments"]) - len(locked),
-            baseline_affected=baseline_affected,
-            baseline_recovered=len(baseline_recovery["assignments"]) - len(base_locked),
-            baseline_recovery_ms=baseline_recovery["runtime_ms"],
-        )
-        data["plan"] = revised
-        data["revision"] += 1
-        data["events"].append("Backup plan generated. Coordinator approval required.")
-        return snapshot(x_demo_session)
+        return {"candidate_id": cid, **snapshot(x_demo_session)}

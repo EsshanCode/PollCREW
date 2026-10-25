@@ -1,4 +1,4 @@
-// Original PollCREW artwork: a friendly ballot box ("Crew") and a star logo.
+// Original Blind Ballot artwork: a friendly ballot box (with an optional blindfold) and a star logo.
 const NAVY = "#1D2B53";
 const RED = "#C8243B";
 const GOLD = "#F2B632";
@@ -6,9 +6,11 @@ const GOLD = "#F2B632";
 export function Mascot({
   size = 160,
   wave = false,
+  blindfold = false,
 }: {
   size?: number;
   wave?: boolean;
+  blindfold?: boolean;
 }) {
   return (
     <svg
@@ -16,7 +18,11 @@ export function Mascot({
       height={size}
       viewBox="0 0 200 200"
       role="img"
-      aria-label="PollCREW mascot, a smiling ballot box"
+      aria-label={
+        blindfold
+          ? "Blind Ballot mascot, a smiling ballot box wearing a blindfold"
+          : "Blind Ballot mascot, a smiling ballot box"
+      }
       className={wave ? "mascot mascot-wave" : "mascot"}
     >
       <ellipse cx="100" cy="186" rx="62" ry="8" fill={NAVY} opacity="0.12" />
@@ -78,6 +84,17 @@ export function Mascot({
         strokeWidth="5"
         strokeLinecap="round"
       />
+      {blindfold && (
+        <g>
+          <rect x="44" y="96" width="112" height="24" rx="9" fill={NAVY} />
+          <path
+            d="M156 104 l18 -10 M156 112 l20 6"
+            stroke={NAVY}
+            strokeWidth="6"
+            strokeLinecap="round"
+          />
+        </g>
+      )}
       <circle cx="68" cy="122" r="6" fill={RED} opacity="0.25" />
       <circle cx="132" cy="122" r="6" fill={RED} opacity="0.25" />
       {/* arm with star */}

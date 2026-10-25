@@ -1,45 +1,23 @@
-# PollCREW demo · 2 minutes 40 seconds
+# Blind Ballot demo · about 3 minutes
 
-Before recording, start both servers, prewarm the embedding model, open the app, and reset the demo. Keep the browser at a desktop width. This script uses the working local app; it does not imply live election data. The optional companion MP4 is a captioned walkthrough assembled from actual app screenshots, not a continuous screen recording.
+Open the site at desktop width. Use the Lewis Center (Delaware County) sample.
 
-**0:00–0:20 · National view**
+**0:00–0:30 · The problem** (home page)
+"The bigger spender wins about 9 in 10 House races. Down the ballot it's worse: 50 million Americans have little or no local news, so for school board or township trustee, people vote on yard signs, party labels or not at all. In Knox County, Ohio, the school board race got 10,000 fewer votes than president."
 
-“PollCREW coordinates election-worker staffing across jurisdictions. This is a nonpartisan prototype with 150 synthetic workers in North Carolina, Wisconsin, and Arizona. These markers show demo coverage, not a live national feed.”
+**0:30–1:10 · Your ballot and priorities**
+Click Find my ballot → Lewis Center. "Every local race on my ballot, even trustee." Start the questions. Answer two or three, pointing out "How much does this matter to you?" Then answer the rest quickly. Choose Usually Republican (or any).
 
-Click **Start the demo** (opens Wake County).
+**1:10–1:50 · Blind match**
+"Candidates are A, B, C. No names, no party, no money. Ranked only by what they say they'd do." Open the top Commissioner match: "Here's why, in the candidate's own words." Point to "your best match in 84% of 2,000 what-ifs": "We rerun the match 2,000 times with small changes to my answers, so I know how solid it is."
 
-**0:20–0:55 · Worker skills**
+**1:50–2:30 · The reveal**
+Click Reveal who they are. "In 3 of 3 races, my best match was not the biggest spender. My commissioner match spent $4,100. The biggest spender spent $86,400 and matched me 52%. And one of my matches is outside my usual party." Mention: "The matching code never sees money or party. We have a test that proves changing them can't change a match."
 
-Open Workers and select Jordan Rivera. Enter: “I helped with registration and data entry. I troubleshoot tablets and printers. I led a team of volunteers.” Click **Suggest skills**. Confirm check-in, reject equipment, and confirm leadership. Click **Save profile**.
+**2:30–2:50 · Tangible output**
+Make my ballot sheet. "A printable ballot for every race. Ohio lets you bring notes into the booth."
 
-“Experience becomes suggested skills with supporting text. This demonstration uses visibly labeled offline extraction; a server-side AI extraction option is available. Workers choose what to confirm. Rejected and unconfirmed skills cannot influence matching.”
+**2:50–3:00 · Candidates**
+Open For candidates. "Candidates answer the same questions, same space, no ads. Add one live and they're matched blind next to everyone else."
 
-**0:55–1:20 · Generate and explain**
-
-Click **Build the plan** in the Next step card. Open the **Plan** tab.
-
-“CP-SAT builds the plan from confirmed skills, full-shift availability, training, travel limits, and coordinator-defined staffing requirements. Wake can deploy six extra check-in workers; the solver puts them where they cut long-line risk the most. Each assignment explains the match. The LLM does not assign anyone.”
-
-Approve the plan. Open Overview.
-
-**1:20–1:40 · Risk and baseline**
-
-“Queue risk comes from 5,000 seeded no-show scenarios, checked against an exact calculation. With no extra staff, there’s a 52% chance some Wake site has a modeled wait over thirty minutes. Spreading six extra workers evenly gets that to about 11%. PollCREW places the same six and gets it to under 3%.”
-
-Open **Results**. Point to the three big numbers (no extra staff, even spread, PollCREW) and the trade-off chart. It is not an individual voter’s wait probability.
-
-**1:40–2:15 · Cancellation recovery**
-
-Click Simulate 3 cancellations. Show 31 preserved assignments and risk jumping to 100%: one site no longer has enough check-in capacity. Click Recover with backups. Show three replacements, all 31 unaffected assignments preserved, and risk back near 2%.
-
-“Three workers cancel. They stay unavailable. We re-solve with backups and lock every unaffected approved assignment. If the requirements cannot be met, the app returns an actionable error instead of breaking constraints.”
-
-Optional, if time allows: instead of the button, open **Poll worker view**, find NC-002, and tap **I can't make it** to show the cancellation coming from a worker's phone in plain language, with a Spanish toggle and large text.
-
-**2:15–2:40 · Coordinator control**
-
-Click Approve revised plan, then Overview.
-
-“The coordinator reviews and approves the revised plan. The same engine supports different staffing counts and skills across these demo jurisdictions. Reset makes the presentation reproducible. This project was built with substantial AI assistance, fully disclosed in the README.”
-
-End on the approved recovery dashboard. No public deployment or submission is authorized by this script.
+All candidates and spending are fictional demo data on real local offices. Built with AI assistance, disclosed in the README.

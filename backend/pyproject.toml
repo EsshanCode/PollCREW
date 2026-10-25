@@ -1,8 +1,8 @@
 [project]
-name = "pollcrew"
-version = "0.1.0"
+name = "blind-ballot"
+version = "1.0.0"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "ortools>=9.12,<10", "numpy>=2,<3", "httpx>=0.28,<1", "sentence-transformers>=3,<6"]
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "httpx>=0.28,<1", "numpy>=2,<3"]
 [dependency-groups]
 dev = ["pytest>=8,<10"]
 [tool.pytest.ini_options]

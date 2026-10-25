@@ -1,163 +1,78 @@
-# PollCREW
+# Blind Ballot
 
-**Coordinated Routing of Election Workers · Hack/OHIO 2026**
+**Vote on policies, not ad budgets. · HackOHI/O 2026**
 
-> **Full AI assistance disclosure:** This prototype was designed, implemented, documented, and tested with substantial generative AI assistance through OpenAI Codex (Astra). AI assistance includes the Python backend, optimization and simulation implementation, React interface, synthetic data generator, tests, documentation, and demo preparation. The risk-aware staffing update (extra-staff budget, exact line-risk objective, trade-off chart), the poll worker view, and the real polling-place import were made with Claude (Anthropic) assistance. The commit history records individual file changes; it is not evidence of unaided human authorship. Human review is necessary before use beyond this hackathon demonstration.
+> **AI assistance disclosure:** This project was designed, built, documented and tested with substantial generative AI assistance (Claude by Anthropic; earlier PollCREW work in this repository also used OpenAI Codex). The commit history records file changes; it is not evidence of unaided human authorship.
 
-PollCREW is a national, nonpartisan staffing prototype. Choose a synthetic jurisdiction, confirm a worker’s skills, generate an explainable assignment plan that places a limited number of extra check-in workers where they cut long-line risk the most, simulate three cancellations, recover with backups while preserving unaffected approved assignments, and approve the revision.
+Blind Ballot matches voters with every candidate on their local ballot, down to school board, township trustee and county commissioner, by what candidates say they would do. Names, parties and campaign spending stay hidden until the voter has matched. Then the reveal shows who they are, their party, their endorsements, and how much they spent.
 
-**All workers, locations, precinct associations, staffing requirements, and demand estimates are synthetic. There is no nationwide live-data coverage, legal certification, compliance determination, or real-world election deployment. No party affiliation is collected.** Real jurisdiction names provide familiar geographic context only.
+**Demo data:** the offices are real local offices in Delaware and Franklin County, Ohio. Every candidate, position, endorsement group and spending figure is fictional. Blind Ballot never invents positions for real people; real candidates enter their own through the candidate portal.
+
+## The problem
+
+- **Money buys name recognition.** In U.S. House races, the candidate who spent more won 91% of the time over four election cycles ([Sherwood News, OpenSecrets data](https://sherwood.news/world/election-winners-spend-big-to-win)). Incumbency explains part of that, but the pattern is the point.
+- **Local races have almost no information.** 213 U.S. counties have no local news source, and about 50 million Americans have limited access to local news ([Medill State of Local News 2025](https://www.medill.northwestern.edu/news/2025/news-deserts-hit-new-high-and-50-million-have-limited-access-to-local-news-study-finds.html)).
+- **So voters guess or skip.** In Knox County, Ohio in 2024, the state school board race drew about 10,000 fewer votes than the presidential race and split nearly 50/50 in a county that votes about 70/30. It was the only race without party labels ([Kenyon College CSAD](https://www.kenyon.edu/offices-and-services/center-for-the-study-of-american-democracy/associates/voter-drop-off-in-non-partisan-races/)).
+
+The people who set property taxes, run schools and fix roads end up chosen by yard signs, ad money and party labels instead of policy.
+
+## How it works
+
+1. **Your ballot.** Enter an address or ZIP. Blind Ballot finds your county's local races and ballot issues.
+2. **Your priorities.** Answer one plain-language local question per screen (school levies, taxes versus services, housing, growth, roads, public safety, parks and libraries) and say how much each matters.
+3. **Blind match.** Each race lists "Candidate A, B, C" ranked by policy agreement, with each candidate's reasons in their own words. No names, parties or money.
+4. **The reveal.** Names, party, endorsements and spending appear, with the punchline: "Your best match spent $4.1K. The biggest spender, at $86.4K, matched you 52%."
+5. **My Blind Ballot.** A printable sheet with your matches for every race and your lean on each levy. Ohio lets voters bring personal notes into the booth.
+
+**Candidate portal (`/candidates`).** Candidates answer the same questions in the same format, with a 160-character reason for each. Everyone gets the same space: no photos, no ads, no paid placement. Spending is shown only at the reveal (in a real launch it comes from campaign finance reports, not the candidate).
+
+## Money-blind by design
+
+- The matching code receives **only stated positions**. Spending, party and endorsements are attached afterwards for the reveal, and a unit test proves that changing them cannot change any match.
+- Candidates get **shuffled blind letters**, so "Candidate A" is never simply the first or richest.
+- **No ads, no sponsored placement**, and nothing is ranked by fundraising.
+- Voter answers are used for one response and **never stored**. The optional "usual party" question is not used for matching; it only lets the reveal say when a match crosses party lines.
+- Questions are **local service trade-offs**, not culture-war topics, and the site never calls a candidate good or bad.
+
+## The math
+
+- **Match:** weighted agreement over the issues each office actually handles: `agreement = 1 − |voter − candidate| / 4` on a shared −2..2 scale, weighted by the voter's own importance (1–3). Unanswered issues are skipped and shown as "didn't answer."
+- **Confidence (Monte Carlo):** people are not perfectly sure of their own answers, so each match is rerun 2,000 times with small random changes to the voter's stances (normal, σ = 0.6) and weights (log-normal, σ = 0.35). Blind Ballot reports how often each candidate stays in the voter's top picks ("your best match in 84% of 2,000 what-ifs") and flags close calls below 60%.
+- **"Vote for 2" races** report membership in the top two.
+- **Ballot issues** (levies) have no candidates to hide; Blind Ballot shows how the voter's own answers lean (yes, no or mixed).
 
 ## Run locally
 
-Requirements: Python 3.12, Node.js 20.9+ (Node 24 tested), and `uv`. Keep both services bound to loopback. This is an unauthenticated, single-process local demo, not a production service.
-
-Terminal 1, from the repository root:
+Requirements: Python 3.12+, `uv`, Node.js 20.9+.
 
 ```sh
-cd backend
-uv sync --frozen
-uv run uvicorn main:app --host 127.0.0.1 --port 8000
+./start.sh
 ```
 
-Terminal 2:
+Or in two terminals:
 
 ```sh
-cd frontend
-npm ci
-npm run build
-npm run start
+cd backend && uv sync --frozen && uv run uvicorn main:app --host 127.0.0.1 --port 8000
+cd frontend && npm ci && npm run build && npm run start
 ```
 
-Open <http://127.0.0.1:3000>. For frontend development, use `npm run dev` instead. Next.js proxies `/api` to FastAPI on port 8000. API documentation is at <http://127.0.0.1:8000/docs>.
-
-The default matching mode uses `sentence-transformers/all-MiniLM-L6-v2` locally. The first assignment generation downloads model weights from Hugging Face and can take longer. Prewarm before presenting:
-
-```sh
-cd backend
-uv run python -c 'from engine import contextual_quality; print(contextual_quality(("check_in", "accessibility"), ("check_in",)))'
-```
-
-For an entirely offline calculation demo, start the backend with `EMBEDDING_MODE=offline`. This uses explicitly labeled exact-skill overlap instead of embeddings. Download dependencies and the model beforehand for contextual matching without network access. The national map uses bundled state boundaries; local street tiles require Internet access. The site list and assignment engine do not depend on tile availability.
+Open <http://127.0.0.1:3000>. Next.js proxies `/api` to FastAPI (set `BACKEND_URL` to point elsewhere). API docs: <http://127.0.0.1:8000/docs>.
 
 ## Deploy (Render + Vercel)
 
-The API keeps demo sessions in memory, so it runs as one always-on process on Render; the Next.js site runs on Vercel and proxies `/api` to it.
+- **API on Render:** New → Blueprint → this repo. `render.yaml` builds `backend/` from `requirements-cloud.txt`.
+- **Site on Vercel:** import the repo, Root Directory `frontend`, environment variable `BACKEND_URL` = the Render URL.
+- Every push to `main` redeploys both. The free Render plan sleeps after 15 idle minutes; the site keeps retrying while it wakes.
 
-1. **API on Render:** New → Blueprint → pick this repo. `render.yaml` builds `backend/` with the slim `requirements-cloud.txt` (no sentence-transformers or torch) and runs offline matching. Add `GOOGLE_CIVIC_API_KEY` when prompted (optional). Copy the service URL, for example `https://pollcrew-api.onrender.com`.
-2. **Site on Vercel:** Add New → Project → import this repo, set **Root Directory** to `frontend`, and add the environment variable `BACKEND_URL` set to the Render URL. Deploy.
-3. Every push to `main` redeploys both.
-
-The free Render plan sleeps after 15 minutes idle and takes about a minute to wake; open the site a few minutes before presenting. The site keeps retrying until the API is awake.
-
-## Poll worker view
-
-Open <http://127.0.0.1:3000/worker>, or use **Poll worker view** in the coordinator sidebar so both views share one demo session. It is built for poll workers of every background, most of whom are 61 or older:
-
-- One question per screen with a step counter and Back link, following the GOV.UK "one thing per page" pattern.
-- 20 px base text with a **Larger text** toggle (24 px), 56–60 px tap targets, high-contrast colors, and icons that always carry a text label.
-- An **Español** toggle on every screen; preferences are remembered on the device.
-- Plain-language skill cards ("Check voters in", "Help voters with disabilities"). Suggested skills quote the worker's own sentence, and nothing is selected until the worker taps it. Offline extraction understands everyday wording such as "front desk" or "nurse" and simple Spanish sentences.
-- After the plan exists, the worker sees one card: date and arrival time, polling place and address, job in plain words, team lead, hours, a **Get directions** link, and an **I can't make it** button. That button (after a confirmation screen) removes them from the approved plan, locks everyone else, and puts the coordinator in recovery mode with updated line risk.
-- Travel limits are asked in miles and stored in kilometers.
-
-Spanish text was drafted with AI assistance and should be reviewed by a native speaker before real use. Workers sign in by picking a sample name in this demo; a real launch would use a link sent by text message.
-
-## Real polling places
-
-The national overview can import real polling places through the [Google Civic Information API](https://developers.google.com/civic-information) `voterinfo` endpoint, which returns the official Election Day polling location for an address from the Voting Information Project. Each unique location with coordinates becomes a site in a new jurisdiction (up to eight). Workers, arrival rates, and staffing requirements remain synthetic and labeled as such.
-
-1. Create a free API key in the Google Cloud console and enable the Civic Information API.
-2. Start the backend with the key: `GOOGLE_CIVIC_API_KEY=your-key uv run uvicorn main:app --host 127.0.0.1 --port 8000`.
-3. On the national overview, keep or edit the sample Columbus addresses and click **Find polling places**.
-
-Results depend on the election being loaded in the Voting Information Project; residential addresses work best. The key stays on the server and is never sent to the browser. Imported jurisdictions survive **Reset demo**.
-
-## Runtime AI, separately from development assistance
-
-- **Contextual matching:** Sentence-transformers compares descriptions of confirmed skills with required skills. Raw experience and rejected or unconfirmed skills do not enter the matcher. Exact required-skill membership remains a hard eligibility rule; similarity cannot override it.
-- **Extraction:** `EXTRACTION_MODE=offline` is the default: a deterministic keyword demonstration, clearly labeled as not an LLM call. It suggests exact supporting text and conservatively skips sentences with simple negation. It is limited and can miss nuanced statements.
-- **Optional live extraction:** Set `EXTRACTION_MODE=openai` and server-side `OPENAI_API_KEY`; optionally set `EXTRACTION_MODEL` (default `gpt-4.1-mini`). Only the submitted experience text and skill taxonomy are sent to OpenAI. Structured output is validated against the taxonomy and supporting quotes must appear verbatim in the input. Model errors do not silently change skills. Worker confirmation is always required. Live provider behavior requires separate testing with your own key.
-- **Assignment decisions:** Explicit eligibility code and OR-Tools CP-SAT make assignments. An LLM never creates or approves an assignment.
-
-Environment examples are in `.env.example`. Variables must be exported into the backend process; the app does not automatically load a `.env` file. Never put API keys in `NEXT_PUBLIC_*`, browser code, screenshots, logs, or Git. Optional integration follows the [official structured-output documentation](https://developers.openai.com/api/docs/guides/structured-outputs).
-
-## Data and operational requirements
-
-Seed 2026 produces 150 workers: 50 each in Wake County, North Carolina; Dane County, Wisconsin; and Maricopa County, Arizona. Each jurisdiction has four physical locations, each associated with two distinct precinct IDs. Wake locations request four check-in workers, two voter-support workers, and one site lead (28 total). Dane requests one voter-support worker per site (24 total). Maricopa requests five check-in workers per site (32 total), and its Central Library support role additionally requires confirmed Spanish assistance. Each jurisdiction also has an **extra check-in staff budget** of six workers beyond the desired counts, editable on the Sites tab before generating a plan. Remaining eligible workers are available as backups. These are synthetic operational choices, not jurisdictional rules.
-
-Workers have confirmed skills, explicit availability, training status, a travel limit, and an attendance assumption. Some are intentionally unavailable for the full shift or untrained. Coordinators can edit minimum and desired counts, required skills, training requirements, shift hours, and queue assumptions before generating a plan. Profiles also expose availability, training, and travel limits. Generated plans freeze these inputs; reset before changing them.
-
-The generator and distance adapter are in `backend/data.py`. Geography, operational configuration, and precinct identifiers are plain records, with no Ohio-specific GIS or transit dependency. Travel is Haversine straight-line distance in kilometers, not road travel or transit time. Replace `distance_km` and the dataset adapter when integrating a validated source. No legal rules are encoded.
-
-Export exact reproducible fixture data:
+## Tests
 
 ```sh
-cd backend
-uv run python export_demo.py > demo-data.json
+cd backend && uv run pytest -q          # matching, money-blindness, Monte Carlo, API, portal
+cd frontend && npx playwright test      # voter flow, candidate portal, mobile layout
 ```
 
-## Optimization and recovery
+## Limits
 
-The solver enforces one assignment per worker, full-shift availability, training where required, all required confirmed skills, travel limits, configured role minimums, desired counts for voter support and site leads, and the extra check-in staff budget. Its objective is lexicographic through weights: first fill desired positions, then **minimize the chance that any site's modeled wait exceeds 30 minutes**, then avoid extra workers that do not reduce that risk, then maximize match quality. Quality combines 70% confirmed-skill contextual similarity and 30% travel proximity.
-
-For each site and each possible check-in count, the solver precomputes the exact probability of a long line: a Poisson-binomial distribution over which assigned workers attend, combined with the M/M/c expected wait. CP-SAT chooses one count per site, so the cost of `-log(1 - risk)` summed across sites is minimized; with independent sites that is exactly the chance that at least one site has a long line. The 5,000-run Monte Carlo below checks the same figure independently. The solver uses one search worker, seed 2026, and a ten-second limit. A feasible result need not be proven optimal; the returned status distinguishes these cases.
-
-Infeasible requests return actionable errors and do not overwrite the previous plan. An unreachable desired count can produce an explicitly reported gap if all hard minimums remain satisfied. No minimum is silently relaxed.
-
-Approve the initial plan to run the cancellation scenario. Three assigned check-in workers at the first location cancel. They remain unavailable through recovery. Every unaffected approved assignment is locked; backups can fill vacancies without moving those workers. A new revision must be reviewed and approved. Stale revision approvals are rejected. Cancellation failure and recovery failure preserve current state. Reset reliably restores the original seed and clears approvals and cancellations.
-
-Sessions are isolated by a random ID stored in browser session storage, kept in backend memory, and expire after 24 hours of inactivity. Restarting the backend clears all sessions. This is not authentication or durable storage. Use one backend process, one uvicorn worker, and synthetic data only.
-
-## Queue simulation and evaluation
-
-Every evaluated plan runs **5,000 seeded no-show scenarios**. Each worker independently attends with probability 0.92; a shared worker-by-scenario attendance matrix is generated in stable order for comparisons. Only attending workers assigned to **Check-in** count as service stations.
-
-The queue model is M/M/c: constant Poisson arrivals, independent exponential service times, and a steady-state expected wait. Mean service time defaults to 2.5 minutes. Wake arrival rates are 64/70/78/86 per hour; Dane 66/69/72/75; Maricopa 86/89/92/95. Configurable values are used directly. Zero check-in staff with positive arrivals and arrival rates greater than or equal to service capacity are unstable with infinite modeled wait. JSON uses `null` for an all-attend wait with no finite steady-state value; the UI explains it. Zero demand yields zero expected wait.
-
-The headline metric is **the percentage of no-show scenarios with modeled expected wait over 30 minutes at any location**, including unstable queues. Every simulation also reports the exact analytic value of the same quantity; the two agree within sampling error. Site cards show the corresponding site-level metric, unstable-scenario share, zero-staff share, and expected wait if all assigned workers attend. This is **not an individual voter’s probability of waiting more than 30 minutes**. It is not a finite-day simulation, and it omits breaks, changing arrival patterns, correlated no-shows, and empirical calibration. High risks are reported honestly; no risk targets are hardcoded.
-
-The baseline is a genuine greedy assignment: visit locations and roles in fixed order, fill hard minimums before desired positions, then hand out the same extra check-in budget one worker per location in turn, taking the highest-scoring remaining eligible worker each time. Both methods use identical data, scores, eligibility rules, budgets, and simulation seeds. The Results tab also plots risk against the extra-staff budget (0 to 8) for both methods. The greedy method can fail hard minimums because it does not globally reserve scarce skills; the dashboard explicitly reports that outcome. Coverage, mean match score, runtime, and queue risk are measured. Recovery applies identical cancelled worker IDs to both plans and preserves each plan’s unaffected assignments; affected counts can differ and are displayed.
-
-Measured results in `docs/benchmark-results.json` (offline matching mode, seed 2026, exact risk):
-
-| Jurisdiction | No extra staff | Even spread of 6 extra | PollCREW with 6 extra |
-| --- | --- | --- | --- |
-| Wake County | 52.2% | 10.7% | 2.6% |
-| Dane County | 52.2% | 10.7% | 2.6% |
-| Maricopa County | 44.3% | 8.7% | 2.8% |
-
-After three check-in cancellations at one site, recovery with the remaining budget keeps PollCREW at 2.2–2.9% (Monte Carlo) versus 9.4–11.4% for the even-spread baseline.
-
-Run reproducible comparisons:
-
-```sh
-cd backend
-uv run python benchmark.py > benchmark.json
-```
-
-Assignment-selection runtime excludes eligibility and score preparation, model loading, and queue simulation. Eligibility and score preparation time is reported separately; first-use model loading and cache state affect that preparation metric. Both algorithms therefore compare selection on prepared candidate sets. Results are observations of this synthetic dataset, not general performance claims.
-
-## Verification
-
-```sh
-cd backend
-uv run pytest -q
-cd ../frontend
-npm run build
-npm run typecheck
-npx playwright install chromium
-npm test
-```
-
-Start the backend before running browser tests. The browser suite starts the frontend production server if needed. Tests cover the poll worker flow (questions, Spanish toggle, assignment card, "I can't make it"), polling-place import with simulated API responses, constraints, rejected-skill exclusion, cancellations, locked assignments, insufficient backups, repeatable simulations, exact-versus-Monte-Carlo risk agreement, budget limits, risk-aware allocation beating even spread in every jurisdiction, recovery restoring low risk, stale approvals, session isolation, reset, worker confirmation, assignment review, budget editing, and mobile requirements validation. See `docs/verification.md` for the actual checks completed and environmental limitations.
-
-Code is intentionally free of explanatory comments; design explanations live here and in documentation. Build-generated files may contain framework-generated notices and are excluded from Git.
-
-## Demo and delivery
-
-Follow `docs/demo-script.md` for a presentation under three minutes. This is a local prototype; no public deployment is part of the project.
-
-## Map attribution
-
-Bundled state geometry is derived from `us-atlas` 3.x, which redistributes US Census Bureau cartographic boundaries. See <https://github.com/topojson/us-atlas>. It is reference geography, not voting-district data. Local maps optionally request tiles from OpenStreetMap and display contributor attribution. Synthetic voting locations are not actual election sites.
+- Demo ballots for two Ohio counties with fictional candidates; ZIP codes that span counties map to one county.
+- Candidate positions are self-reported. A real launch needs identity verification for candidates, and source links for any position not entered by the candidate.
+- Self-reported answers can be strategic. Showing each candidate's reasons in their own words, side by side, makes vague or evasive answers visible.

@@ -1,1115 +1,759 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowLeft,
   ArrowRight,
-  BarChart3,
   Check,
-  ClipboardList,
-  Globe2,
-  LayoutDashboard,
+  ChevronDown,
+  Eye,
   MapPin,
+  Printer,
   RotateCcw,
   ShieldCheck,
-  Smartphone,
-  Sparkles,
-  Users,
-  Zap,
 } from "lucide-react";
-import { AppState } from "@/components/types";
-import WorkerEditor from "@/components/WorkerEditor";
-import LocationEditor from "@/components/LocationEditor";
-import ImportPanel from "@/components/ImportPanel";
-import { LogoMark, Mascot } from "@/components/Brand";
-const Map = dynamic(() => import("@/components/Map"), {
-  ssr: false,
-  loading: () => <div className="map loading">Loading map…</div>,
-});
-const RiskChart = dynamic(() => import("@/components/RiskChart"), {
-  ssr: false,
-  loading: () => <p>Loading chart…</p>,
-});
-const TradeoffChart = dynamic(() => import("@/components/TradeoffChart"), {
-  ssr: false,
-  loading: () => <p>Loading chart…</p>,
-});
+import Header from "@/components/Header";
+import { Mascot } from "@/components/Brand";
+import {
+  County,
+  MatchResult,
+  RaceResult,
+  State,
+  api,
+  loadState,
+  money,
+} from "@/lib/api";
 
-const TABS = [
-  { id: "Overview", icon: LayoutDashboard },
-  { id: "Workers", icon: Users },
-  { id: "Plan", icon: ClipboardList },
-  { id: "Sites", icon: MapPin },
-  { id: "Results", icon: BarChart3 },
+type Step =
+  "intro" | "address" | "ballot" | "question" | "party" | "results" | "sheet";
+type Answer = { stance: number | null; weight: number };
+
+const STANCES = [
+  { value: -2, label: "Strongly disagree" },
+  { value: -1, label: "Disagree" },
+  { value: 0, label: "Neutral" },
+  { value: 1, label: "Agree" },
+  { value: 2, label: "Strongly agree" },
 ];
+const WEIGHTS = [
+  { value: 1, label: "A little" },
+  { value: 2, label: "Somewhat" },
+  { value: 3, label: "A lot" },
+];
+const PARTY_OPTIONS = [
+  { value: "Democratic", label: "Usually Democratic" },
+  { value: "Republican", label: "Usually Republican" },
+  { value: "Independent", label: "Independent / it depends" },
+  { value: "None", label: "Prefer not to say" },
+];
+const FACTS = [
+  {
+    stat: "91%",
+    text: "of U.S. House races went to the bigger spender over four election cycles.",
+    source: "Sherwood News, OpenSecrets data",
+    url: "https://sherwood.news/world/election-winners-spend-big-to-win",
+  },
+  {
+    stat: "50M",
+    text: "Americans have little or no local news to learn about local candidates.",
+    source: "Medill State of Local News, 2025",
+    url: "https://www.medill.northwestern.edu/news/2025/news-deserts-hit-new-high-and-50-million-have-limited-access-to-local-news-study-finds.html",
+  },
+  {
+    stat: "10,000",
+    text: "fewer Knox County, Ohio voters marked the state school board race than the race for president in 2024.",
+    source: "Kenyon College CSAD",
+    url: "https://www.kenyon.edu/offices-and-services/center-for-the-study-of-american-democracy/associates/voter-drop-off-in-non-partisan-races/",
+  },
+];
+const LEAN_TEXT = {
+  yes: "Your answers lean YES",
+  no: "Your answers lean NO",
+  mixed: "Your answers are mixed on this one",
+  unknown: "You skipped the questions this depends on",
+};
 
-export default function Home() {
-  const [data, setData] = useState<AppState | null>(null);
-  const [sid, setSid] = useState("");
-  const [selected, setSelected] = useState("");
-  const [tab, setTab] = useState("Overview");
-  const [workerId, setWorkerId] = useState("");
+export default function Voter() {
+  const [state, setState] = useState<State | null>(null);
+  const [waking, setWaking] = useState(false);
+  const [step, setStep] = useState<Step>("intro");
+  const [address, setAddress] = useState("");
+  const [countyId, setCountyId] = useState("");
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [qIndex, setQIndex] = useState(0);
+  const [party, setParty] = useState<string | null>(null);
+  const [result, setResult] = useState<MatchResult | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState("");
-  const [notice, setNotice] = useState("");
-  const [formEpoch, setFormEpoch] = useState(0);
-  const [filter, setFilter] = useState("");
-  const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
-  const select = useCallback((id: string) => {
-    setSelected(id);
-    setTab("Overview");
-    setWorkerId("");
-    setNotice("");
-    setError("");
-  }, []);
-  const request = useCallback(
-    async (path: string, method = "GET", body?: unknown) => {
-      const response = await fetch(`/api${path}`, {
-        method,
-        headers: { "Content-Type": "application/json", "X-Demo-Session": sid },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      const json = await response.json();
-      if (!response.ok)
-        throw new Error(
-          typeof json.detail === "string"
-            ? json.detail
-            : "Check your numbers: a minimum can’t be higher than the desired count, and a shift has to end after it starts.",
-        );
-      return json;
-    },
-    [sid],
-  );
+
   useEffect(() => {
-    let active = true;
-    async function init(attempt = 0): Promise<void> {
-      try {
-        const stored = sessionStorage.getItem("pollcrew-session");
-        let response = stored
-          ? await fetch("/api/state", { headers: { "X-Demo-Session": stored } })
-          : null;
-        if (response?.ok) {
-          const json = await response.json();
-          if (active) {
-            setSid(stored!);
-            setData(json);
-            setError("");
-          }
-        } else {
-          response = await fetch("/api/sessions", { method: "POST" });
-          if (!response.ok) throw new Error("Unable to start demo.");
-          const json = await response.json();
-          if (active) {
-            sessionStorage.setItem("pollcrew-session", json.session_id);
-            setSid(json.session_id);
-            setData(json);
-            setError("");
-          }
-        }
-      } catch {
-        if (!active) return;
-        if (attempt === 2)
-          setError(
-            "Can’t reach the PollCREW server yet. Start the backend on port 8000. This page will connect by itself.",
-          );
-        await new Promise((r) => setTimeout(r, 2000));
-        return init(attempt + 1);
-      }
-    }
-    init();
-    return () => {
-      active = false;
-    };
+    loadState(() => setWaking(true)).then((s) => {
+      setState(s);
+      setWaking(false);
+    });
   }, []);
-  async function action(
-    working: string,
-    path: string,
-    done: string,
-    body?: unknown,
-  ) {
-    setBusy(working);
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [step, qIndex]);
+
+  const county: County | undefined = state?.counties.find(
+    (c) => c.id === countyId,
+  );
+  const questions = useMemo(() => {
+    if (!state || !county) return [];
+    const used = new Set(county.races.flatMap((r) => r.issues));
+    return state.issues.filter((i) => used.has(i.id));
+  }, [state, county]);
+  const question = questions[qIndex];
+  const current = question ? answers[question.id] : undefined;
+
+  async function findBallot(text: string) {
     setError("");
-    setNotice("");
+    setBusy(true);
     try {
-      setData(await request(path, "POST", body));
-      if (path === "/reset") setFormEpoch((n) => n + 1);
-      setNotice(done);
+      const found = await api<{ county: string }>("/lookup", "", "POST", {
+        address: text,
+      });
+      setCountyId(found.county);
+      setAddress(text);
+      setStep("ballot");
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy("");
+      setBusy(false);
     }
   }
-  const current = data?.jurisdictions.find(
-    (d) => d.jurisdiction.id === selected,
-  );
-  const plan = current?.plan;
-  const impact = current?.impact;
-  const workers = current?.workers ?? [];
-  const worker = workers.find((w) => w.id === workerId) ?? workers[1];
-  const totalWorkers =
-    data?.jurisdictions.reduce((n, j) => n + j.workers.length, 0) ?? 0;
-  const totalLocations =
-    data?.jurisdictions.reduce((n, j) => n + j.locations.length, 0) ?? 0;
-  const workerHref = `/worker${sid ? `?s=${sid}` : ""}${selected ? `${sid ? "&" : "?"}j=${selected}` : ""}`;
-  const recovered = impact?.recovered != null;
-  const steps = [
-    { label: "Review workers", done: !!plan },
-    { label: "Build the plan", done: !!plan },
-    { label: "Approve", done: !!plan?.approved || !!impact },
-    {
-      label: "Handle Election Day",
-      done: recovered && !!plan?.approved,
+  async function runMatch(usual: string | null) {
+    if (!state) return;
+    setBusy(true);
+    setError("");
+    try {
+      const body = {
+        county: countyId,
+        answers,
+        usual_party: usual,
+      };
+      setResult(
+        await api<MatchResult>("/match", state.session_id, "POST", body),
+      );
+      setRevealed(false);
+      setStep("results");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  function answer(patch: Partial<Answer>) {
+    if (!question) return;
+    setAnswers({
+      ...answers,
+      [question.id]: {
+        ...(answers[question.id] ?? { stance: null, weight: 2 }),
+        ...patch,
+      },
+    });
+  }
+  function next() {
+    if (qIndex + 1 < questions.length) setQIndex(qIndex + 1);
+    else setStep("party");
+  }
+  function startOver() {
+    setAnswers({});
+    setQIndex(0);
+    setParty(null);
+    setResult(null);
+    setRevealed(false);
+    setCountyId("");
+    setAddress("");
+    setStep("intro");
+  }
+  const back: Partial<Record<Step, () => void>> = {
+    address: () => setStep("intro"),
+    ballot: () => setStep("address"),
+    question: () => (qIndex > 0 ? setQIndex(qIndex - 1) : setStep("ballot")),
+    party: () => {
+      setQIndex(questions.length - 1);
+      setStep("question");
     },
-  ];
-  const currentStep = steps.findIndex((s) => !s.done);
-  const cancelledCount = impact?.cancelled_ids.length ?? 0;
+    sheet: () => setStep("results"),
+  };
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <a className="brand" href="/" aria-label="PollCREW home">
-          <LogoMark size={42} />
-          <span>
-            Poll<span>CREW</span>
-          </span>
-        </a>
-        <nav className="side-nav" aria-label="Main">
-          <button
-            className={!selected ? "nav active" : "nav"}
-            onClick={() => select("")}
-          >
-            <Globe2 size={19} />
-            Home
+    <div className="page">
+      <Header active="voter" />
+      <main
+        className={
+          step === "results" || step === "sheet" ? "wrap wide" : "wrap"
+        }
+      >
+        {back[step] && (
+          <button className="back" onClick={back[step]}>
+            <ArrowLeft size={18} /> Back
           </button>
-          <a className="nav" href={workerHref}>
-            <Smartphone size={19} />
-            Poll worker view
-          </a>
-          <div className="side-label">Counties</div>
-          {data?.jurisdictions.map((j) => (
-            <button
-              key={j.jurisdiction.id}
-              className={
-                selected === j.jurisdiction.id
-                  ? "nav county-nav active"
-                  : "nav county-nav"
-              }
-              onClick={() => select(j.jurisdiction.id)}
-            >
-              <span className="state-code">{j.jurisdiction.code}</span>
-              <span>
-                {j.jurisdiction.name}
-                <small>{j.jurisdiction.state}</small>
-              </span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <ShieldCheck size={20} />
-          <span>
-            <strong>Nonpartisan</strong>
-            <small>Demo data only</small>
-          </span>
-        </div>
-      </aside>
-      <main>
-        <div className="bunting" aria-hidden />
-        <div className="content">
-          {error && (
-            <div className="error" role="alert">
-              {error}
-              <button className="text-button" onClick={() => setError("")}>
-                Dismiss
-              </button>
-            </div>
-          )}
-          <div role="status" aria-live="polite">
-            {busy && (
-              <div className="notice">
-                <span className="spinner" />
-                {busy}…
-              </div>
-            )}
-            {notice && !busy && (
-              <div className="success">
-                <Check size={18} strokeWidth={3} />
-                {notice}
-              </div>
-            )}
+        )}
+        {error && (
+          <div className="alert" role="alert">
+            {error}
           </div>
-          {!data ? (
-            <div className="panel loading">
-              {error ? "Waiting for the server…" : "Loading…"}
-            </div>
-          ) : !current ? (
-            <>
-              <section className="hero">
-                <div className="hero-text">
-                  <h1>Every precinct crewed. Every line short.</h1>
-                  <p className="subtitle">
-                    Staff every polling place, then keep it staffed when
-                    Election Day changes.
-                  </p>
-                  <div className="button-row">
-                    <button
-                      className="big"
-                      onClick={() =>
-                        select(data.jurisdictions[0].jurisdiction.id)
-                      }
-                    >
-                      Start the demo <ArrowRight size={18} />
-                    </button>
-                    <button
-                      className="secondary big"
-                      disabled={!!busy}
-                      onClick={() =>
-                        action("Resetting", "/reset", "Demo reset.")
-                      }
-                    >
-                      <RotateCcw size={16} />
-                      Reset demo
-                    </button>
-                  </div>
-                </div>
-                <Mascot size={210} wave />
-              </section>
-              <div className="stats">
-                <Stat value={`${data.jurisdictions.length}`} label="Counties" />
-                <Stat value={`${totalWorkers}`} label="Poll workers" />
-                <Stat value={`${totalLocations}`} label="Polling places" />
-              </div>
-              <section className="panel">
-                <div className="section-heading">
-                  <h2>Pick a county</h2>
-                  <label className="state-filter">
-                    <span className="sr-only">State</span>
-                    <select
-                      aria-label="Filter jurisdictions by state"
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                    >
-                      <option value="">All states</option>
-                      {data.jurisdictions.map((j) => (
-                        <option
-                          key={j.jurisdiction.id}
-                          value={j.jurisdiction.code}
-                        >
-                          {j.jurisdiction.state}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="pick-grid">
-                  <Map
-                    data={data.jurisdictions}
-                    selected=""
-                    onSelect={select}
-                  />
-                  <div className="jurisdiction-cards">
-                    {data.jurisdictions
-                      .filter((j) => !filter || j.jurisdiction.code === filter)
-                      .map((j) => (
-                        <button
-                          className="jurisdiction-card"
-                          key={j.jurisdiction.id}
-                          onClick={() => select(j.jurisdiction.id)}
-                        >
-                          <span className="state-badge">
-                            {j.jurisdiction.code}
-                          </span>
-                          <span className="card-body">
-                            <span className="card-state">
-                              {j.jurisdiction.state}
-                            </span>
-                            <h3>{j.jurisdiction.name}</h3>
-                            <span className="small">
-                              {j.workers.length} workers, {j.locations.length}{" "}
-                              {j.jurisdiction.real_locations
-                                ? "real polling places"
-                                : "sites"}
-                            </span>
-                          </span>
-                          {j.plan ? (
-                            <span className="chip done">
-                              {j.plan.approved ? "Approved" : "Planned"}
-                            </span>
-                          ) : (
-                            <ArrowRight size={20} />
-                          )}
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              </section>
-              <ImportPanel
-                configured={data.polling_api_configured}
-                request={request}
-                onImported={(next, id) => {
-                  setData(next);
-                  select(id);
-                }}
-              />
-            </>
-          ) : (
-            <>
-              <div className="heading-row">
-                <div>
-                  <h1>{current.jurisdiction.name}</h1>
-                  <p className="subtitle">
-                    {current.jurisdiction.state}
-                    <span
-                      className={
-                        current.jurisdiction.real_locations
-                          ? "chip live"
-                          : "chip"
-                      }
-                    >
-                      {current.jurisdiction.real_locations
-                        ? "Real polling places"
-                        : "Demo data"}
-                    </span>
-                  </p>
-                </div>
+        )}
+        {!state && step !== "intro" && (
+          <div className="panel center">
+            <span className="spinner" />{" "}
+            {waking ? "Waking up the server, about a minute…" : "Loading…"}
+          </div>
+        )}
+
+        {step === "intro" && (
+          <>
+            <section className="hero">
+              <div className="hero-text">
+                <h1>Vote on policies, not ad budgets.</h1>
+                <p className="lead">
+                  Blind Ballot matches you with every candidate on your local
+                  ballot, down to school board, by what they say they’d do.
+                  Names, parties and money stay hidden until you’ve matched.
+                </p>
                 <button
-                  className="secondary"
-                  disabled={!!busy}
-                  onClick={() => {
-                    setWorkerId("");
-                    action("Resetting", "/reset", "Demo reset.");
-                  }}
+                  className="primary big"
+                  onClick={() => setStep("address")}
                 >
-                  <RotateCcw size={16} />
-                  Reset demo
+                  Find my ballot <ArrowRight size={20} />
                 </button>
               </div>
-              <ol className="stepper" aria-label="Progress">
-                {steps.map((s, i) => (
-                  <li
-                    key={s.label}
-                    className={
-                      s.done ? "done" : i === currentStep ? "current" : ""
-                    }
-                    aria-current={i === currentStep ? "step" : undefined}
-                  >
-                    <span className="step-dot">
-                      {s.done ? <Check size={16} strokeWidth={3.5} /> : i + 1}
-                    </span>
-                    {s.label}
-                  </li>
-                ))}
-              </ol>
-              <section className="next-step">
-                <div>
-                  <h2>
-                    {!plan
-                      ? "Build the staffing plan"
-                      : plan.disrupted
-                        ? `${cancelledCount} worker${cancelledCount === 1 ? " can’t" : "s can’t"} make it`
-                        : !plan.approved
-                          ? recovered
-                            ? "Backups found"
-                            : "Check the plan, then approve it"
-                          : recovered
-                            ? "Every site is covered again"
-                            : "Plan approved"}
-                  </h2>
-                  <p>
-                    {!plan
-                      ? "PollCREW matches workers to sites in seconds. You can review worker skills first."
-                      : plan.disrupted
-                        ? `${impact?.preserved} other assignments stay exactly where they are.`
-                        : !plan.approved
-                          ? recovered
-                            ? `${impact?.recovered} replacements are ready. Approve to send the changes.`
-                            : `${plan.assignments.length} workers placed and ${Math.round(plan.coverage * 100)}% of spots filled.`
-                          : recovered
-                            ? `Line risk is back to ${plan.simulation.risk_percent}%.`
-                            : "Now try an Election Day surprise."}
-                  </p>
-                </div>
-                <div className="button-row">
-                  {!plan && (
-                    <>
-                      <button
-                        className="big"
-                        disabled={!!busy}
-                        onClick={() =>
-                          action(
-                            "Building the plan",
-                            `/jurisdictions/${selected}/generate`,
-                            "Plan ready.",
-                          )
-                        }
-                      >
-                        <Sparkles size={18} />
-                        Build the plan
-                      </button>
-                      <button
-                        className="secondary big"
-                        onClick={() => setTab("Workers")}
-                      >
-                        Review workers
-                      </button>
-                    </>
-                  )}
-                  {plan && !plan.approved && !plan.disrupted && (
-                    <>
-                      <button
-                        className="big"
-                        disabled={!!busy}
-                        onClick={() =>
-                          action(
-                            "Approving",
-                            `/jurisdictions/${selected}/approve`,
-                            "Approved.",
-                            { revision: current.revision },
-                          )
-                        }
-                      >
-                        <Check size={18} strokeWidth={3} />
-                        {impact ? "Approve revised plan" : "Approve plan"}
-                      </button>
-                      {tab !== "Plan" && (
-                        <button
-                          className="secondary big"
-                          onClick={() => setTab("Plan")}
-                        >
-                          See who goes where
-                        </button>
-                      )}
-                    </>
-                  )}
-                  {plan?.approved && !impact && (
-                    <button
-                      className="gold big"
-                      disabled={!!busy}
-                      onClick={() =>
-                        action(
-                          "Cancelling 3 workers",
-                          `/jurisdictions/${selected}/cancel`,
-                          "3 workers cancelled.",
-                        )
-                      }
-                    >
-                      <Zap size={18} />
-                      Simulate 3 cancellations
-                    </button>
-                  )}
-                  {plan?.disrupted && (
-                    <button
-                      className="big"
-                      disabled={!!busy}
-                      onClick={() =>
-                        action(
-                          "Finding backups",
-                          `/jurisdictions/${selected}/recover`,
-                          "Backups assigned.",
-                        )
-                      }
-                    >
-                      Recover with backups <ArrowRight size={18} />
-                    </button>
-                  )}
-                  {plan?.approved && recovered && tab !== "Results" && (
-                    <button
-                      className="secondary big"
-                      onClick={() => setTab("Results")}
-                    >
-                      See results
-                    </button>
-                  )}
-                </div>
-              </section>
-              <div className="stats four">
-                <Stat
-                  value={`${workers.filter((w) => !w.cancelled).length}`}
-                  label="Workers ready"
-                  detail={
-                    workers.some((w) => w.cancelled)
-                      ? `${workers.filter((w) => w.cancelled).length} cancelled`
-                      : undefined
-                  }
+              <Mascot size={200} blindfold />
+            </section>
+            <ol className="how">
+              <li>
+                <span>1</span>
+                <strong>Your ballot</strong>
+                Every local race on it, even treasurer and trustee
+              </li>
+              <li>
+                <span>2</span>
+                <strong>Your priorities</strong>A few plain questions about
+                local issues
+              </li>
+              <li>
+                <span>3</span>
+                <strong>Blind match</strong>
+                Candidates ranked by policy, not name or money
+              </li>
+              <li>
+                <span>4</span>
+                <strong>The reveal</strong>
+                Then see who they are, their party and spending
+              </li>
+            </ol>
+            <section className="facts" aria-label="Why it matters">
+              {FACTS.map((f) => (
+                <a
+                  key={f.stat}
+                  className="fact"
+                  href={f.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <strong>{f.stat}</strong>
+                  <span>{f.text}</span>
+                  <small>{f.source}</small>
+                </a>
+              ))}
+            </section>
+          </>
+        )}
+
+        {step === "address" && state && (
+          <section className="panel step">
+            <h1>Where do you vote?</h1>
+            <p className="lead">
+              Your address decides which races are on your ballot. It’s only
+              used for this lookup.
+            </p>
+            <form
+              className="address"
+              onSubmit={(e) => {
+                e.preventDefault();
+                findBallot(address);
+              }}
+            >
+              <label htmlFor="address">Home address or ZIP code</label>
+              <div className="address-row">
+                <input
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. 43035"
+                  autoComplete="street-address"
                 />
-                <Stat
-                  value={plan ? `${Math.round(plan.coverage * 100)}%` : "–"}
-                  label="Spots filled"
-                  detail={
-                    plan
-                      ? `${Math.round(plan.coverage * plan.needed)} of ${plan.needed}`
-                      : undefined
-                  }
-                />
-                <Stat
-                  value={plan ? `${plan.simulation.risk_percent}%` : "–"}
-                  label="Long-line risk"
-                  detail="Chance any site waits 30+ min"
-                  tone={
-                    plan && plan.simulation.risk_percent > 30
-                      ? "bad"
-                      : undefined
-                  }
-                />
-                <Stat
-                  value={
-                    plan?.approved
-                      ? "Approved"
-                      : plan?.disrupted
-                        ? "Needs backups"
-                        : plan
-                          ? "Draft"
-                          : "Not built"
-                  }
-                  label="Plan"
-                  detail={`Version ${current.revision}`}
-                />
+                <button
+                  className="primary"
+                  disabled={busy || address.trim().length < 3}
+                >
+                  <MapPin size={18} /> Find my ballot
+                </button>
               </div>
-              {impact && (
-                <section className="impact">
-                  <h2>Election Day changes</h2>
-                  <ul>
-                    <li>
-                      <strong>{impact.cancelled_ids.length}</strong> cancelled
-                      <small>{impact.cancelled_ids.join(", ")}</small>
-                    </li>
-                    <li>
-                      <strong>{impact.preserved}</strong> kept in place
-                    </li>
-                    <li>
-                      <strong>{recovered ? impact.recovered : "–"}</strong>{" "}
-                      {recovered ? "replaced" : "waiting for backups"}
-                    </li>
-                    <li>
-                      <strong>
-                        {impact.before_risk}% → {impact.after_risk}%
-                        {recovered
-                          ? ` → ${plan?.simulation.risk_percent}%`
-                          : ""}
-                      </strong>{" "}
-                      long-line risk
-                    </li>
-                  </ul>
-                </section>
-              )}
-              <nav className="tabs" aria-label="County sections">
-                {TABS.map(({ id, icon: Icon }) => (
-                  <button
-                    className={tab === id ? "selected" : ""}
-                    key={id}
-                    onClick={() => setTab(id)}
-                    aria-pressed={tab === id}
-                  >
-                    <Icon size={17} />
-                    {id}
-                  </button>
-                ))}
-              </nav>
-              {tab === "Overview" && (
-                <>
-                  <div className="overview-grid">
-                    <section className="panel map-panel">
-                      <div className="section-heading">
-                        <h2>Polling places</h2>
-                        <span className="map-legend">
-                          <span>
-                            <i className="legend-dot" />
-                            Fully staffed
-                          </span>
-                          <span>
-                            <i className="legend-dot short" />
-                            Short
-                          </span>
-                          <span>
-                            <i className="legend-dot gray" />
-                            No plan yet
-                          </span>
-                        </span>
-                      </div>
-                      <Map
-                        data={data.jurisdictions}
-                        selected={selected}
-                        onSelect={select}
-                      />
-                      {current.jurisdiction.real_locations && (
-                        <p className="map-note">
-                          Polling places from {current.jurisdiction.source}.
-                          Workers are demo data.
-                        </p>
-                      )}
-                    </section>
-                    <section className="panel">
-                      <h2>Long-line risk by site</h2>
-                      {plan ? (
-                        <>
-                          <RiskChart simulation={plan.simulation} />
-                          <p className="small">
-                            Share of 5,000 simulated Election Days where the
-                            site’s wait passes 30 minutes.
-                          </p>
-                        </>
-                      ) : (
-                        <div className="empty">
-                          <BarChart3 size={34} />
-                          <p>Build the plan to see each site’s risk.</p>
-                        </div>
-                      )}
-                    </section>
+            </form>
+            <p className="fine">
+              Demo covers Delaware and Franklin County, Ohio. Try:
+            </p>
+            <div className="chips">
+              {state.counties.map((c) => (
+                <button
+                  key={c.id}
+                  className="chip-button"
+                  onClick={() => findBallot(c.sample_address)}
+                >
+                  {c.place.split(",")[0]} ({c.name})
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {step === "ballot" && county && (
+          <section className="panel step">
+            <p className="eyebrow-chip">
+              <MapPin size={14} /> {county.name}, Ohio
+            </p>
+            <h1>
+              Your ballot has {county.races.length + county.measures.length}{" "}
+              local choices
+            </h1>
+            <p className="lead">
+              These are the races people most often skip or guess on. You’ll
+              answer {questions.length} quick questions about the issues these
+              offices decide.
+            </p>
+            <ul className="ballot-list">
+              {county.races.map((r) => (
+                <li key={r.id}>
+                  <div>
+                    <strong>{r.office}</strong>
+                    <span>{r.what}</span>
                   </div>
-                  <div className="location-grid">
-                    {current.locations.map((loc) => {
-                      const assigned =
-                        plan?.assignments.filter(
-                          (a) => a.location_id === loc.id,
-                        ) ?? [];
-                      const risk = plan?.simulation.locations.find(
-                        (l) => l.id === loc.id,
-                      );
-                      const need = loc.requirements.reduce(
-                        (n, r) => n + r.desired,
-                        0,
-                      );
-                      const full = plan && assigned.length >= need;
-                      return (
-                        <section className="panel location-card" key={loc.id}>
-                          <div className="location-top">
-                            <h3>{loc.name}</h3>
-                            {plan && (
-                              <span
-                                className={full ? "chip done" : "chip warn"}
-                              >
-                                {Math.min(assigned.length, need)}/{need}
-                                {assigned.length > need
-                                  ? ` +${assigned.length - need}`
-                                  : ""}
-                              </span>
-                            )}
-                          </div>
-                          <p className="small">
-                            {loc.address ??
-                              `Precincts ${loc.precincts.join(", ")}`}
-                          </p>
-                          <div className="progress">
-                            <span
-                              style={{
-                                width: `${need ? Math.min(100, (assigned.length / need) * 100) : 100}%`,
-                              }}
-                            />
-                          </div>
-                          <div className="role-counts">
-                            {loc.requirements.map((r) => (
-                              <div key={r.role}>
-                                <span>{r.role}</span>
-                                <strong>
-                                  {
-                                    assigned.filter((a) => a.role === r.role)
-                                      .length
-                                  }
-                                  /{r.desired}
-                                </strong>
-                              </div>
-                            ))}
-                          </div>
-                          {risk && (
-                            <p
-                              className={
-                                risk.risk_percent > 30
-                                  ? "site-risk bad"
-                                  : "site-risk"
-                              }
-                            >
-                              Long-line risk{" "}
-                              <strong>{risk.risk_percent}%</strong>
-                            </p>
-                          )}
-                        </section>
-                      );
-                    })}
+                  <small>
+                    {r.candidates} candidates
+                    {r.vote_for > 1 ? `, vote for ${r.vote_for}` : ""}
+                    {!r.partisan ? ", no party on ballot" : ""}
+                  </small>
+                </li>
+              ))}
+              {county.measures.map((m) => (
+                <li key={m.id} className="measure">
+                  <div>
+                    <strong>{m.title}</strong>
+                    <span>{m.what}</span>
                   </div>
-                </>
-              )}
-              {tab === "Workers" && (
-                <div className="worker-grid">
-                  <section className="panel worker-list">
-                    <h2>Workers</h2>
-                    <p className="small">Pick someone to review.</p>
-                    {workers.map((w) => (
-                      <button
-                        className={
-                          worker?.id === w.id
-                            ? "worker selected-worker"
-                            : "worker"
-                        }
-                        key={w.id}
-                        onClick={() => setWorkerId(w.id)}
-                      >
-                        <span className="person-avatar">
-                          {w.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </span>
-                        <span>
-                          <strong>{w.name}</strong>
-                          <small>
-                            {w.id}, {w.confirmed_skills.length} skills
-                          </small>
-                        </span>
-                        {w.cancelled && (
-                          <span className="chip bad">Cancelled</span>
-                        )}
-                      </button>
-                    ))}
-                  </section>
-                  {worker && (
-                    <WorkerEditor
-                      key={`${formEpoch}-${selected}-${worker.id}`}
-                      worker={worker}
-                      skills={data.skills}
-                      locked={!!plan}
-                      request={request}
-                      save={async (w) => {
-                        setData(
-                          await request(
-                            `/jurisdictions/${selected}/workers/${w.id}`,
-                            "PUT",
-                            w,
-                          ),
-                        );
-                      }}
-                    />
-                  )}
+                  <small>Yes or no</small>
+                </li>
+              ))}
+            </ul>
+            <p className="demo-note">
+              Demo ballot: real offices, fictional candidates.
+            </p>
+            <button
+              className="primary big"
+              onClick={() => {
+                setQIndex(0);
+                setStep("question");
+              }}
+            >
+              Start the questions <ArrowRight size={20} />
+            </button>
+          </section>
+        )}
+
+        {step === "question" && question && (
+          <section className="panel step">
+            <div className="progress" aria-hidden>
+              {questions.map((q, i) => (
+                <span
+                  key={q.id}
+                  className={i < qIndex ? "done" : i === qIndex ? "now" : ""}
+                />
+              ))}
+            </div>
+            <p className="step-count">
+              Question {qIndex + 1} of {questions.length}{" "}
+              <span className="topic">{question.topic}</span>
+            </p>
+            <h1 className="statement">{question.text}</h1>
+            <div className="stances" role="radiogroup" aria-label="Your view">
+              {STANCES.map((s) => (
+                <button
+                  key={s.value}
+                  role="radio"
+                  aria-checked={current?.stance === s.value}
+                  className={`stance s${s.value + 2}${current?.stance === s.value ? " on" : ""}`}
+                  onClick={() => answer({ stance: s.value })}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            {current?.stance != null && (
+              <div className="importance">
+                <p>How much does this matter to you?</p>
+                <div
+                  className="segmented"
+                  role="radiogroup"
+                  aria-label="How much it matters"
+                >
+                  {WEIGHTS.map((w) => (
+                    <button
+                      key={w.value}
+                      role="radio"
+                      aria-checked={current.weight === w.value}
+                      className={current.weight === w.value ? "on" : ""}
+                      onClick={() => answer({ weight: w.value })}
+                    >
+                      {w.label}
+                    </button>
+                  ))}
                 </div>
+              </div>
+            )}
+            <div className="question-actions">
+              <button
+                className="primary big"
+                disabled={current?.stance == null}
+                onClick={next}
+              >
+                Next <ArrowRight size={20} />
+              </button>
+              <button
+                className="link"
+                onClick={() => {
+                  setAnswers({
+                    ...answers,
+                    [question.id]: { stance: null, weight: 0 },
+                  });
+                  next();
+                }}
+              >
+                Skip this one
+              </button>
+            </div>
+          </section>
+        )}
+
+        {step === "party" && (
+          <section className="panel step">
+            <p className="step-count">Last one, optional</p>
+            <h1>Which party do you usually vote for?</h1>
+            <p className="lead">
+              It isn’t used for matching. It only lets the reveal show you when
+              a match crosses party lines. Your answers are never saved.
+            </p>
+            <div className="options">
+              {PARTY_OPTIONS.map((p) => (
+                <button
+                  key={p.value}
+                  className={party === p.value ? "option on" : "option"}
+                  aria-pressed={party === p.value}
+                  onClick={() => setParty(p.value)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <button
+              className="primary big"
+              disabled={busy}
+              onClick={() => runMatch(party)}
+            >
+              {busy ? "Matching…" : "See my blind matches"}{" "}
+              <ArrowRight size={20} />
+            </button>
+          </section>
+        )}
+
+        {step === "results" && result && county && (
+          <section className="results">
+            <div className={revealed ? "banner revealed" : "banner"}>
+              <Mascot size={110} blindfold={!revealed} />
+              <div>
+                {revealed ? (
+                  <>
+                    <h1>
+                      In {result.summary.best_not_top_spender} of{" "}
+                      {result.summary.matched} races, your best match was not
+                      the biggest spender.
+                    </h1>
+                    <p className="lead">
+                      {result.summary.usual_party &&
+                      ["Democratic", "Republican"].includes(
+                        result.summary.usual_party,
+                      )
+                        ? `${result.summary.crossed_party} of your top matches ${result.summary.crossed_party === 1 ? "comes" : "come"} from outside your usual party. `
+                        : ""}
+                      Matching never saw names, parties or money.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h1>Your blind matches are ready</h1>
+                    <p className="lead">
+                      Ranked only by what candidates say they’d do. Names,
+                      parties and spending are hidden.
+                    </p>
+                  </>
+                )}
+              </div>
+              {!revealed ? (
+                <button className="gold big" onClick={() => setRevealed(true)}>
+                  <Eye size={20} /> Reveal who they are
+                </button>
+              ) : (
+                <button
+                  className="primary big"
+                  onClick={() => setStep("sheet")}
+                >
+                  <Printer size={20} /> Make my ballot sheet
+                </button>
               )}
-              {tab === "Plan" && (
-                <section className="panel">
-                  <div className="section-heading">
-                    <h2>Who goes where</h2>
-                    {plan && (
-                      <span className="chip">
-                        {plan.assignments.length} assigned
+            </div>
+            <div className="races">
+              {result.races.map((race) => (
+                <RaceCard key={race.race_id} race={race} revealed={revealed} />
+              ))}
+              {result.measures.map((m) => (
+                <section key={m.id} className="race measure-card">
+                  <header>
+                    <div>
+                      <h2>{m.title}</h2>
+                      <p className="small">{m.what}</p>
+                    </div>
+                  </header>
+                  <p className={`lean ${m.lean}`}>{LEAN_TEXT[m.lean]}</p>
+                  <p className="small">
+                    Based on how you answered about parks and libraries versus
+                    property taxes. Ballot issues have no candidates to hide.
+                  </p>
+                </section>
+              ))}
+            </div>
+            <p className="demo-note">
+              Demo ballot: real offices, fictional candidates, positions and
+              spending.
+            </p>
+          </section>
+        )}
+
+        {step === "sheet" && result && county && (
+          <section className="sheet">
+            <div className="sheet-head">
+              <div>
+                <p className="eyebrow-chip">My Blind Ballot</p>
+                <h1>{county.name}, Ohio</h1>
+                <p className="lead">
+                  General election, November 3, 2026. Matched on policy before
+                  seeing names, parties or money.
+                </p>
+              </div>
+              <Mascot size={100} />
+            </div>
+            <ol className="sheet-list">
+              {result.races.map((race) => (
+                <li key={race.race_id}>
+                  <div className="sheet-office">
+                    <strong>{race.office}</strong>
+                    <span>Vote for {race.vote_for}</span>
+                  </div>
+                  <div className="sheet-picks">
+                    {race.best.length ? (
+                      race.best.map((id) => {
+                        const r = race.results.find(
+                          (x) => x.candidate_id === id,
+                        )!;
+                        return (
+                          <span key={id} className="pick">
+                            <Check size={18} strokeWidth={3} />
+                            {race.reveal[id].name}
+                            <em>{r.match}% match</em>
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="pick none">
+                        No match (you skipped these issues)
                       </span>
                     )}
                   </div>
-                  {!plan ? (
-                    <div className="empty">
-                      <ClipboardList size={34} />
-                      <p>Build the plan to see assignments.</p>
-                    </div>
-                  ) : (
-                    <>
-                      {plan.gaps.length > 0 && (
-                        <div className="notice">
-                          Still open:{" "}
-                          {plan.gaps
-                            .map(
-                              (g) => `${g.unfilled} ${g.role} at ${g.location}`,
-                            )
-                            .join(", ")}
-                        </div>
-                      )}
-                      <div className="table-wrap">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Worker</th>
-                              <th>Site and job</th>
-                              <th>Fit</th>
-                              <th>Why</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {plan.assignments.map((a) => (
-                              <tr key={a.worker_id}>
-                                <td>
-                                  <strong>{a.worker_name}</strong>
-                                  <small>{a.worker_id}</small>
-                                </td>
-                                <td>
-                                  {
-                                    current.locations.find(
-                                      (l) => l.id === a.location_id,
-                                    )?.name
-                                  }
-                                  <small>{a.role}</small>
-                                </td>
-                                <td>
-                                  <span className="score">{a.score}</span>
-                                  <small>{a.travel_km} km</small>
-                                </td>
-                                <td className="reason">{a.reason}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  )}
-                </section>
-              )}
-              {tab === "Sites" && (
-                <section className="panel">
-                  <h2>Staffing needs</h2>
-                  <p className="small">
-                    Minimums must be met. Desired counts are goals.
-                    {plan ? " Reset the demo to make changes." : ""}
-                  </p>
-                  <div className="budget-editor">
-                    <div>
-                      <h3>Extra check-in workers</h3>
-                      <p className="small">
-                        PollCREW puts them where lines would be longest.
-                      </p>
-                    </div>
-                    <input
-                      type="number"
-                      min={0}
-                      max={20}
-                      aria-label="Extra check-in staff budget"
-                      disabled={!!plan || !!busy}
-                      value={budgetDraft ?? String(current.surge_budget)}
-                      onChange={(e) => setBudgetDraft(e.target.value)}
-                    />
-                    <button
-                      className="secondary"
-                      disabled={!!plan || !!busy || budgetDraft === null}
-                      onClick={async () => {
-                        setError("");
-                        setNotice("");
-                        try {
-                          setData(
-                            await request(
-                              `/jurisdictions/${selected}/budget`,
-                              "PUT",
-                              { surge_budget: Number(budgetDraft) },
-                            ),
-                          );
-                          setBudgetDraft(null);
-                          setNotice("Budget saved.");
-                        } catch (e) {
-                          setError((e as Error).message);
-                        }
-                      }}
-                    >
-                      Save budget
-                    </button>
+                </li>
+              ))}
+              {result.measures.map((m) => (
+                <li key={m.id}>
+                  <div className="sheet-office">
+                    <strong>{m.title}</strong>
+                    <span>Yes or no</span>
                   </div>
-                  {current.locations.map((loc) => (
-                    <LocationEditor
-                      key={`${formEpoch}-${selected}-${loc.id}`}
-                      location={loc}
-                      skills={data.skills}
-                      locked={!!plan}
-                      save={async (l) => {
-                        setData(
-                          await request(
-                            `/jurisdictions/${selected}/locations/${l.id}`,
-                            "PUT",
-                            l,
-                          ),
-                        );
-                      }}
-                    />
-                  ))}
-                </section>
-              )}
-              {tab === "Results" && (
-                <section className="panel">
-                  <h2>How much shorter are the lines?</h2>
-                  {plan && current.baseline ? (
-                    (() => {
-                      const initial = current.before ?? plan;
-                      const base = current.baseline;
-                      const none = current.curve?.[0]?.even_risk_percent;
-                      return (
-                        <>
-                          <div className="scoreboard">
-                            {none != null && (
-                              <div>
-                                <strong>{none}%</strong>
-                                <span>No extra staff</span>
-                              </div>
-                            )}
-                            <div>
-                              <strong>
-                                {base.simulation.analytic_risk_percent}%
-                              </strong>
-                              <span>
-                                {base.surge_budget} extra, spread evenly
-                              </span>
-                            </div>
-                            <div className="win">
-                              <strong>
-                                {initial.simulation.analytic_risk_percent}%
-                              </strong>
-                              <span>
-                                Same {initial.surge_budget} extra, placed by
-                                PollCREW
-                              </span>
-                            </div>
-                          </div>
-                          <p className="small">
-                            Chance at least one site has a 30+ minute wait.
-                          </p>
-                          {current.curve && (
-                            <div className="tradeoff">
-                              <h3>Same budget, smarter placement</h3>
-                              <TradeoffChart
-                                curve={current.curve}
-                                budget={initial.surge_budget}
-                              />
-                            </div>
-                          )}
-                          <h3>Side by side</h3>
-                          <div className="table-wrap">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th />
-                                  <th>PollCREW</th>
-                                  <th>Simple fill</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td>Spots filled</td>
-                                  <td>{Math.round(initial.coverage * 100)}%</td>
-                                  <td>{Math.round(base.coverage * 100)}%</td>
-                                </tr>
-                                <tr>
-                                  <td>Average fit</td>
-                                  <td>{initial.match_quality}/100</td>
-                                  <td>{base.match_quality}/100</td>
-                                </tr>
-                                <tr>
-                                  <td>Minimums met</td>
-                                  <td>{initial.minimums_met ? "Yes" : "No"}</td>
-                                  <td>{base.minimums_met ? "Yes" : "No"}</td>
-                                </tr>
-                                <tr>
-                                  <td>Extra workers used</td>
-                                  <td>
-                                    {initial.surge_assigned} of{" "}
-                                    {initial.surge_budget}
-                                  </td>
-                                  <td>
-                                    {base.surge_assigned} of {base.surge_budget}
-                                  </td>
-                                </tr>
-                                <tr>
-                                  <td>Long-line risk (exact)</td>
-                                  <td>
-                                    {initial.simulation.analytic_risk_percent}%
-                                  </td>
-                                  <td>
-                                    {base.simulation.analytic_risk_percent}%
-                                  </td>
-                                </tr>
-                                <tr>
-                                  <td>Long-line risk (5,000 runs)</td>
-                                  <td>{initial.simulation.risk_percent}%</td>
-                                  <td>{base.simulation.risk_percent}%</td>
-                                </tr>
-                                <tr>
-                                  <td>Time to plan</td>
-                                  <td>{initial.runtime_ms} ms</td>
-                                  <td>{base.runtime_ms} ms</td>
-                                </tr>
-                                {impact?.recovered != null && (
-                                  <>
-                                    <tr>
-                                      <td>Cancellations fixed</td>
-                                      <td>
-                                        {impact.recovered} /{" "}
-                                        {impact.lost_assignments} affected
-                                      </td>
-                                      <td>
-                                        {impact.baseline_recovered} /{" "}
-                                        {impact.baseline_affected} affected
-                                      </td>
-                                    </tr>
-                                    <tr>
-                                      <td>Time to fix</td>
-                                      <td>{plan.runtime_ms} ms</td>
-                                      <td>{impact.baseline_recovery_ms} ms</td>
-                                    </tr>
-                                  </>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        </>
-                      );
-                    })()
-                  ) : (
-                    <div className="empty">
-                      <BarChart3 size={34} />
-                      <p>Build the plan to compare.</p>
-                    </div>
-                  )}
-                  <details className="assumptions">
-                    <summary>How we measured</summary>
-                    <p>
-                      Simple fill goes site by site, fills minimums, then
-                      desired counts, then hands out extra workers one per site
-                      in turn, always picking the best remaining eligible
-                      worker. It is not weakened on purpose.
-                    </p>
-                    <p>
-                      Each assigned worker shows up with 92% probability. Voters
-                      arrive at a steady random rate and check-in takes 2.5
-                      minutes on average (an M/M/c queue). PollCREW computes the
-                      exact chance of a 30+ minute wait for every possible
-                      check-in count and minimizes the chance that any site goes
-                      over, within the extra-staff budget. 5,000 simulated days
-                      check that number. No breaks, correlated no-shows, or
-                      morning rush are modeled.
-                    </p>
-                    <p>
-                      Matching:{" "}
-                      {data.matching_mode === "offline"
-                        ? "exact overlap of confirmed skills"
-                        : "sentence-embedding similarity of confirmed skills"}
-                      , 70% skills and 30% travel distance. Required skills are
-                      always hard rules. Timings vary by machine.
-                    </p>
-                  </details>
-                  <details className="assumptions">
-                    <summary>Activity log</summary>
-                    <ol className="activity">
-                      {current.events.map((e, i) => (
-                        <li key={i}>{e}</li>
-                      ))}
-                    </ol>
-                  </details>
-                </section>
-              )}
-            </>
-          )}
-          <footer>
-            <span>PollCREW, HackOHI/O 2026</span>
-            <span>Demo data only. Built with AI assistance.</span>
-          </footer>
-        </div>
+                  <div className="sheet-picks">
+                    <span className={`pick lean-${m.lean}`}>
+                      {LEAN_TEXT[m.lean]}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="fine">
+              Ohio lets you bring personal notes into the voting booth. This is
+              a guide: you choose. Demo data: fictional candidates.
+            </p>
+            <div className="sheet-actions">
+              <button className="primary" onClick={() => window.print()}>
+                <Printer size={18} /> Print or save as PDF
+              </button>
+              <button className="secondary" onClick={startOver}>
+                <RotateCcw size={18} /> Start over
+              </button>
+              <a className="secondary as-button" href="/candidates">
+                <ShieldCheck size={18} /> Running for office? Add yourself
+              </a>
+            </div>
+          </section>
+        )}
       </main>
+      <footer className="foot">
+        Blind Ballot, HackOHI/O 2026. Nonpartisan. No ads, no paid placement,
+        and your answers are never saved. Built with AI assistance.
+      </footer>
     </div>
   );
 }
-function Stat({
-  value,
-  label,
-  detail,
-  tone,
-}: {
-  value: string;
-  label: string;
-  detail?: string;
-  tone?: "bad";
-}) {
+
+function RaceCard({ race, revealed }: { race: RaceResult; revealed: boolean }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const maxSpend = Math.max(
+    1,
+    ...Object.values(race.reveal).map((r) => r.spending),
+  );
+  const best = race.best[0];
+  const top = race.reveal[race.top_spender];
+  const topMatch = race.results.find(
+    (r) => r.candidate_id === race.top_spender,
+  )?.match;
   return (
-    <section className={tone ? `stat ${tone}` : "stat"}>
-      <span className="stat-label">{label}</span>
-      <strong>{value}</strong>
-      {detail && <p>{detail}</p>}
+    <section className={revealed ? "race revealed" : "race"}>
+      <header>
+        <div>
+          <h2>{race.office}</h2>
+          <p className="small">{race.what}</p>
+        </div>
+        <span className="chip">
+          {race.vote_for > 1 ? `Vote for ${race.vote_for}` : "Vote for 1"}
+        </span>
+      </header>
+      {race.close_call && (
+        <p className="close-call">
+          Close call: small changes to your answers could flip this one.
+        </p>
+      )}
+      <ol className="candidates">
+        {race.results.map((r) => {
+          const info = race.reveal[r.candidate_id];
+          const isBest = race.best.includes(r.candidate_id);
+          const expanded = open === r.candidate_id;
+          return (
+            <li key={r.candidate_id} className={isBest ? "cand best" : "cand"}>
+              <button
+                className="cand-row"
+                aria-expanded={expanded}
+                onClick={() => setOpen(expanded ? null : r.candidate_id)}
+              >
+                <span
+                  className={revealed ? "avatar shown" : "avatar"}
+                  aria-hidden
+                >
+                  {revealed
+                    ? info.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                    : r.letter}
+                </span>
+                <span className="cand-name">
+                  <strong>
+                    {revealed ? info.name : `Candidate ${r.letter}`}
+                  </strong>
+                  {revealed ? (
+                    <span className="meta">
+                      <span className="chip small">{info.party}</span>
+                      {info.source === "self" && (
+                        <span className="chip small self">Self-reported</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="meta muted">Identity hidden</span>
+                  )}
+                </span>
+                <span className="match">
+                  <span className="match-num">{r.match ?? "–"}%</span>
+                  <span className="match-bar">
+                    <span style={{ width: `${r.match ?? 0}%` }} />
+                  </span>
+                </span>
+                <ChevronDown
+                  size={20}
+                  className={expanded ? "chev open" : "chev"}
+                />
+              </button>
+              {isBest && r.chance != null && (
+                <p className="chance">
+                  {race.vote_for > 1
+                    ? "In your top " + race.vote_for
+                    : "Your best match"}{" "}
+                  in {Math.round(r.chance * 100)}% of 2,000 what-ifs
+                </p>
+              )}
+              {revealed && (
+                <div className="money">
+                  <span className="money-label">
+                    Spent {money(info.spending)}
+                  </span>
+                  <span className="money-bar">
+                    <span
+                      style={{ width: `${(info.spending / maxSpend) * 100}%` }}
+                    />
+                  </span>
+                  {info.endorsements.length > 0 && (
+                    <span className="endorse">
+                      Endorsed by {info.endorsements.join(", ")}
+                    </span>
+                  )}
+                </div>
+              )}
+              {expanded && (
+                <ul className="why">
+                  {r.why.map((w) => (
+                    <li key={w.issue} className={w.kind}>
+                      <span className="why-kind">
+                        {w.kind === "agree"
+                          ? "Agrees with you"
+                          : w.kind === "disagree"
+                            ? "Disagrees"
+                            : w.kind === "partly"
+                              ? "Partly agrees"
+                              : "Didn’t answer"}
+                      </span>
+                      <strong>{w.short}</strong>
+                      {w.reason && <q>{w.reason}</q>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      {revealed && best && (
+        <p className="punchline">
+          {race.top_spender_is_best
+            ? `Here your best match also spent the most (${money(top.spending)}). Money and policy point the same way in this race.`
+            : `Your best match spent ${money(race.reveal[best].spending)}. The biggest spender, at ${money(top.spending)}, matched you ${topMatch}%.`}
+        </p>
+      )}
     </section>
   );
 }

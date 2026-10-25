@@ -6,8 +6,9 @@ import "@fontsource/atkinson-hyperlegible/400.css";
 import "@fontsource/atkinson-hyperlegible/700.css";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "PollCREW: every precinct crewed",
-  description: "Nonpartisan election-day poll worker staffing demo.",
+  title: "Blind Ballot: vote on policies, not ad budgets",
+  description:
+    "Match with every candidate on your local ballot by policy, before you see names, parties or money.",
 };
 export default function RootLayout({
   children,
