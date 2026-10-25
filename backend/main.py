@@ -1,6 +1,7 @@
 """Blind Ballot API: local ballots, money-blind policy matching, and a candidate portal."""
 
 import copy
+import re
 import threading
 import time
 import uuid
@@ -9,9 +10,10 @@ from typing import Annotated, Literal, Optional
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-from ballots import COUNTIES, ISSUE_IDS, ISSUES, county_for_zip
+from ballots import COUNTIES, ISSUE_IDS, ISSUES
 from census import CensusError, districts
 from fec import attach, senate_money
+from local import counties_for_zip, key, local_races
 from matching import match_ballot
 from ohio import COUNTY_BOARDS_URL, SAMPLE_BALLOT_URL, SOURCE, STATEWIDE
 
@@ -170,25 +172,32 @@ def statewide():
 
 @app.post("/api/lookup")
 def lookup(body: Lookup):
-    """Real districts from the Census Bureau, real statewide candidates, and the demo ballot if one exists."""
+    """Real districts (Census), real statewide and local candidates, and the demo ballot if one exists."""
     found = None
-    note = None
     try:
         found = districts(body.address)
     except CensusError as exc:
         if "outside Ohio" in str(exc):
             raise HTTPException(404, str(exc)) from exc
-        note = str(exc)
-    demo = DEMO_FIPS.get(found["county_fips"]) if found else county_for_zip(body.address)
-    if not found and not demo:
-        raise HTTPException(
-            404,
-            note or "Enter your full Ohio street address, city and ZIP.",
-        )
+    zip_counties = counties_for_zip(body.address)
+    if found:
+        county_name = found["county"]
+    elif zip_counties:
+        county_name = zip_counties[0]
+    else:
+        raise HTTPException(404, "Enter an Ohio ZIP code (it starts with 43, 44 or 45).")
+    demo = key(county_name) if key(county_name) in DEMO_FIPS.values() else None
+    note = None
+    if not found:
+        note = "Add your street address to see your exact districts."
+        if len(zip_counties) > 1:
+            others = " and ".join(zip_counties[1:])
+            note = f"Your ZIP also reaches into {others} County. Add your street address to be sure."
     return {
         "county": demo,
         "districts": found,
-        "districts_note": None if found else "Enter a full street address to see your exact districts.",
+        "districts_note": note,
+        "local": local_races(county_name, found),
         "statewide": statewide(),
         "statewide_source": SOURCE,
         "links": {"voter_lookup": SAMPLE_BALLOT_URL, "county_boards": COUNTY_BOARDS_URL},

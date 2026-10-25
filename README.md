@@ -11,10 +11,12 @@
 | Your districts: county, city or township, school district, Ohio House, Ohio Senate, U.S. House | [U.S. Census Bureau Geocoder](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html) (2026 state legislative districts, 120th Congressional districts) | **Real**, any Ohio street address |
 | Statewide races and candidates (U.S. Senate, Governor, Attorney General, Auditor, Secretary of State, Treasurer, two Supreme Court seats) | [Wood County Board of Elections certified list](https://boe.woodcountyohio.gov/DocumentCenter/View/1006/Candidate-List) (Aug 26, 2026), cross-checked with [Hamilton County's](https://votehamiltoncountyohio.gov/wp-content/uploads/2026/08/November-2026-Candidate-Profile-1-3.pdf) (Aug 21, 2026) | **Real**, every Ohio ballot |
 | U.S. Senate campaign money | [FEC API](https://api.open.fec.gov/developers/) (`FEC_API_KEY`) | **Real**, hidden behind a toggle |
-| Local races with candidates, positions, endorsements and spending | Fictional demo on real offices | Delaware and Franklin County |
+| Local candidates (county offices, judges, Ohio House and Senate, U.S. House) | Each county board of elections' own published list, with its link and revision date (`backend/data/ohio_local_2026.json`) | **Real**, 80 of 88 counties; narrowed to your districts when you give a street address |
+| ZIP to county | [Census 2020 ZCTA-to-County relationship file](https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/) | **Real**, every Ohio ZIP |
+| Blind matching with positions, endorsements and spending | Fictional demo on real offices | Delaware and Franklin County |
 | Real candidates' positions | Only from candidates themselves, via the portal | None yet: shown as "No candidate has answered yet" |
 
-Local candidate lists for Ohio's 88 counties are published separately by each county board of elections (no statewide feed exists, and Google's Civic API has no Ohio contests for this election), so the app links to the [Secretary of State's county board directory](https://www.ohiosos.gov/elections/elections-officials/county-boards-of-elections-directory/) instead of guessing. Blind Ballot never invents positions for real people.
+Ohio has no statewide feed of local candidates (and Google's Civic API has no Ohio contests for this election), so the lists come from each county board's own document, mostly the 46-day notice for overseas voters. Coshocton, Henry, Huron, Lucas, Mercer, Morrow, Sandusky and Williams had no November list we could reach; for those the app links to the [Secretary of State's county board directory](https://www.ohiosos.gov/elections/elections-officials/county-boards-of-elections-directory/) instead of guessing. Blind Ballot never invents positions for real people.
 
 ## The problem
 

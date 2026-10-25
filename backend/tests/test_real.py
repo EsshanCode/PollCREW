@@ -165,3 +165,40 @@ def test_lookup_endpoint(monkeypatch):
 
     monkeypatch.setattr(main, "districts", outside)
     assert client.post("/api/lookup", json={"address": "Indianapolis, IN"}).status_code == 404
+
+    def unmatched(address):
+        raise CensusError("The Census Bureau couldn't find that address.")
+
+    monkeypatch.setattr(main, "districts", unmatched)
+    body = client.post("/api/lookup", json={"address": "OH 43604"}).json()  # ZIP only, Toledo
+    assert body["county"] is None and body["districts"] is None
+    assert len(body["statewide"]) == 8 and "street address" in body["districts_note"]
+    assert client.post("/api/lookup", json={"address": "OH 90210"}).status_code == 404
+
+
+def test_local_races_from_county_lists():
+    from local import LOCAL, counties_for_zip, local_races
+
+    assert len(LOCAL) == 88
+    assert sum(1 for v in LOCAL.values() if v["found"]) == 80
+    assert counties_for_zip("Toledo, OH 43604") == ["Lucas"]
+    assert counties_for_zip("Dublin 43017") == ["Franklin", "Delaware"]
+    assert counties_for_zip("Beverly Hills 90210") == []
+    # Delaware's official list: commissioner race and both of its Ohio House districts.
+    full = local_races("Delaware County")
+    offices = [(r["office"], r["district"]) for r in full["races"]]
+    assert ("Ohio House", "60") in offices and ("Ohio House", "61") in offices
+    commissioner = next(r for r in full["races"] if r["office"] == "County Commissioner")
+    assert {c["name"] for c in commissioner["candidates"]} == {"Ryan Grissinger", "Renee Vaughan"}
+    # With Census districts, only the voter's own legislative districts remain.
+    mine = local_races("Delaware County", {"us_house": "12", "ohio_senate": "19", "ohio_house": "60"})
+    kept = [(r["office"], r["district"]) for r in mine["races"]]
+    assert ("Ohio House", "60") in kept and ("Ohio House", "61") not in kept
+    assert ("U.S. House", "4") not in kept and mine["narrowed"]
+    # Counties without a published list say so instead of guessing.
+    assert local_races("Lucas County")["found"] is False
+    # Real candidates carry names and parties only.
+    for v in LOCAL.values():
+        for r in v["races"]:
+            for c in r["candidates"]:
+                assert set(c) == {"name", "party"}

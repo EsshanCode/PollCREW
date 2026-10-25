@@ -89,10 +89,16 @@ test("voter: blind match, reveal, and ballot sheet", async ({ page }) => {
   await expect(page.getByText("Linda Kowalczyk")).toBeVisible();
   await expect(
     page.getByText(
-      "Your best match spent $4.1K. The biggest spender ($86.4K) matched you 52%.",
+      "Best match spent $4.1K. Top spender ($86.4K) matched you 52%.",
     ),
   ).toBeVisible();
   await page.screenshot({ path: "test-results/reveal.png", fullPage: true });
+  // One race per slide: Next through the rest, then the ballot sheet.
+  await expect(page.getByText("1 of 4")).toBeVisible();
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole("button", { name: "Next" }).click();
+  }
+  await expect(page.getByText("4 of 4")).toBeVisible();
   await page.getByRole("button", { name: "Make my ballot sheet" }).click();
   await expect(
     page.getByRole("heading", { name: "Delaware County, Ohio" }),
@@ -138,6 +144,7 @@ test("candidate portal: a new candidate is matched blind", async ({ page }) => {
   await answerAll(page, 0);
   await page.getByRole("button", { name: "See my blind matches" }).click();
   await page.getByRole("switch", { name: "Reveal who they are" }).click();
+  await page.getByRole("button", { name: /Orange Township Trustee/ }).click();
   await expect(page.getByText("Sam Lee")).toBeVisible();
   await expect(page.getByText("Self-reported")).toBeVisible();
 });
@@ -148,7 +155,7 @@ test("mobile: Franklin County by ZIP, no sideways scrolling", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.getByRole("button", { name: "Find my ballot" }).click();
-  await page.getByLabel("Street address, city and ZIP").fill("43210");
+  await page.getByLabel("ZIP code").fill("43210");
   await page.getByRole("button", { name: "Find my ballot" }).click();
   await expect(
     page.getByRole("heading", { name: "Your ballot has 4 local choices" }),
@@ -166,4 +173,19 @@ test("mobile: Franklin County by ZIP, no sideways scrolling", async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBeTruthy();
+});
+
+test("outside the demo counties: real local candidates by ZIP", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Find my ballot" }).click();
+  await page.getByLabel("ZIP code").fill("44308");
+  await page.getByRole("button", { name: "Find my ballot" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your ballot in Summit County" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Local races" })).toBeVisible();
+  await expect(page.getByText("Emilia Sykes")).toBeVisible();
+  await expect(page.getByText("Sherrod Brown")).toBeVisible();
 });
