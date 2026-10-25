@@ -1,4 +1,4 @@
-# PollCREW
+# Blind Ballot
 
 **Coordinated Routing of Election Workers · Hack/OHIO 2026**
 
