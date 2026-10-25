@@ -1,5 +1,5 @@
 {
-  "name": "pollcrew-web",
+  "name": "snug-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,22 +12,16 @@
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@fontsource/fredoka": "^5.3.0",
-    "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
     "next": "^16.0.0",
-    "plotly.js-dist-min": "^3.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
-    "@types/leaflet": "^1.9.20",
     "@types/node": "^24.0.0",
-    "@types/plotly.js": "^3.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "topojson-client": "^3.1.0",
-    "typescript": "^5.9.0",
-    "us-atlas": "^3.0.1"
+    "typescript": "^5.9.0"
   }
 }

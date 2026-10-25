@@ -1,4 +1,4 @@
-# Render blueprint for the PollCREW API (one always-on process keeps demo sessions in memory).
+# Render blueprint for the Snug API (stateless rules engine + optional vision point finder).
 services:
   - type: web
     name: pollcrew-api
@@ -11,9 +11,5 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
-      - key: EMBEDDING_MODE
-        value: offline
-      - key: EXTRACTION_MODE
-        value: offline
-      - key: GOOGLE_CIVIC_API_KEY
+      - key: ANTHROPIC_API_KEY
         sync: false
