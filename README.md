@@ -1,128 +1,73 @@
 # Blind Ballot
 
-**Vote on policies, not ad budgets**
+**Vote on policies, not ad budgets. · HackOHI/O 2026**
 
-Blind Ballot is a nonpartisan voter guide for Ohio elections. It matches voters with candidates based on policy positions before revealing names, parties, endorsements, or campaign spending.
+Blind Ballot is a nonpartisan voter guide that helps Ohio voters compare candidates based on policy positions before seeing their names, parties, endorsements, or campaign spending.
 
-The goal is simple: help people compare candidates on the issues instead of relying on name recognition or advertising.
+The website is designed to reduce the influence of name recognition and political advertising. Instead of asking voters to begin with a candidate, Blind Ballot begins with the issues that matter to them.
 
-## How it works
+## What the website does
 
-1. Enter an Ohio address or ZIP code.
-2. Review the races and ballot issues for your area.
-3. Answer short questions about local priorities.
-4. Choose how important each issue is to you.
-5. See candidates ranked by policy agreement under anonymous labels.
-6. Reveal candidate names, parties, endorsements, and spending.
-7. Print **My Blind Ballot** as a personal reference sheet.
+Voters enter an Ohio address or ZIP code to find the races and ballot issues connected to their area. They then answer short, plain-language questions about priorities such as schools, taxes, housing, roads, public safety, parks, and local services.
 
-Voter answers are used to calculate the results and are not stored.
+For each question, voters can also say how important the issue is to them. Blind Ballot compares those answers with candidate positions and presents the closest matches under anonymous labels such as **Candidate A** and **Candidate B**.
 
-## Main features
+After reviewing the policy matches, voters can reveal each candidate’s:
 
-- Address-based Ohio district lookup
-- Local and statewide election information
-- Policy-first candidate matching
-- Hidden identities during matching
-- Campaign-spending comparison after the reveal
-- Printable personal ballot summary
-- Candidate response portal at `/candidates`
-- Optional matching walkthrough at `/additional-features`
+- Name
+- Party
+- Endorsements
+- Campaign spending
+- Explanation of their positions
 
-Blind Ballot contains no ads, sponsored placement, or fundraising-based rankings.
+This order allows voters to form an opinion from policy agreement before seeing information that may introduce bias.
 
-## Data
+## The voter experience
 
-Blind Ballot combines real public election data with clearly labeled demo content.
+1. Find your local ballot.
+2. Answer questions about the issues you care about.
+3. Choose how important each issue is to you.
+4. Compare candidates without names or party labels.
+5. Reveal candidate identities and campaign information.
+6. Save or print **My Blind Ballot** as a personal voting reference.
 
-| Information | Source |
-| --- | --- |
-| Ohio districts | U.S. Census Bureau Geocoder |
-| Statewide candidates | Ohio county boards of elections |
-| Local candidates | County boards of elections |
-| U.S. Senate campaign spending | Federal Election Commission |
-| ZIP-to-county mapping | U.S. Census Bureau |
-| Demo candidate positions | Fictional data for demonstration |
+Ballot issues such as levies are handled separately because there is no candidate identity to hide. The website shows whether the voter’s answers lean toward yes, no, or remain mixed.
 
-Real candidates without submitted policy positions are shown as **No candidate has answered yet**. The app does not invent positions for real people.
+## What makes Blind Ballot different
 
-## Matching
+- Matches are based on stated policy positions, not fundraising or popularity.
+- Candidate identities remain hidden until after the comparison.
+- There are no ads, paid placements, or sponsored rankings.
+- Voters decide which issues carry the most weight.
+- Candidates receive the same space to explain their answers.
+- The website does not label candidates as good or bad.
 
-Candidates and voters answer the same issue questions on a scale from strongly disagree to strongly agree. Each match score is based on:
+Names, parties, endorsements, and spending cannot change a match result. They are shown only after the policy comparison is complete.
 
-- How closely the answers agree
-- How important each issue is to the voter
-- Only the issues handled by that office
+## Candidate participation
 
-Names, parties, endorsements, and spending are added only after matching. Changing those details does not change a candidate’s score.
+Candidates can use the candidate portal to answer the same questions shown to voters. Each answer includes a short explanation in the candidate’s own words.
 
-The app also runs repeated what-if comparisons with small changes to the voter’s answers and priorities. This helps show whether a result is stable or whether the race is a close match. These results describe the matching calculation, not election odds.
+Real candidates who have not submitted positions are shown as **No candidate has answered yet**. Blind Ballot does not invent positions for real people.
 
-## Candidate portal
+## Election information
 
-Candidates can open `/candidates` and answer the same questions voters see. Each answer includes a short explanation in the candidate’s own words.
+Blind Ballot uses public information from sources including:
 
-The demo does not verify candidate identity and does not permanently save portal submissions. A public release would need identity verification and durable storage.
+- U.S. Census Bureau district and geographic data
+- Ohio county boards of elections
+- Federal Election Commission campaign-finance data
 
-## Run locally
+Some candidate positions and matches are fictional and clearly labeled for demonstration. Real election information and demo content are kept separate.
 
-Requirements:
+## Privacy and neutrality
 
-- Python 3.11 or newer
-- Node.js 20.9 or newer
-- `uv`
+Voter answers are used to produce the comparison and are not stored. An optional question about usual party preference is never used to calculate matches.
 
-Install dependencies:
+Blind Ballot is nonpartisan. It does not recommend a party, predict election results, or tell anyone how to vote. Its purpose is to make policy differences easier to understand and help voters make their own informed choices.
 
-```sh
-cd backend
-uv sync --frozen
+## Current scope
 
-cd ../frontend
-npm ci
-```
+Blind Ballot currently focuses on Ohio elections. Coverage depends on the public information available from state and county election offices. A street address provides more accurate local results than a ZIP code when a ZIP crosses county boundaries.
 
-From the repository root, start both services:
-
-```sh
-./start.sh
-```
-
-Or run them in separate terminals:
-
-```sh
-cd backend
-uv run uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-```sh
-cd frontend
-npm run build
-npm run start
-```
-
-Open <http://127.0.0.1:3000>. API documentation is available at <http://127.0.0.1:8000/docs>.
-
-For frontend development, use:
-
-```sh
-cd frontend
-npm run dev
-```
-
-## Configuration
-
-To load current U.S. Senate campaign-spending data, add a free Federal Election Commission key to the backend environment:
-
-```sh
-FEC_API_KEY=your-key
-```
-
-Without a key, the app uses the public demonstration key with lower request limits.
-
-For deployment, set `BACKEND_URL` in the frontend environment to the public API URL.
-
-## Tests
-
-Run backend tests:
-
+Blind Ballot is a prototype created for HackOHI/O 2026 and is not an official election service.
