@@ -1728,138 +1728,6 @@ fieldset {
   }
 }
 
-/* How it works page */
-.about .panel h2 {
-  font-size: 1.35rem;
-}
-.tool-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 12px;
-}
-.tool {
-  display: grid;
-  align-content: start;
-  gap: 6px;
-  padding: 14px;
-  border: 2px solid var(--line);
-  border-radius: 16px;
-  color: var(--navy);
-  text-decoration: none;
-  background: #fff;
-}
-a.tool:hover {
-  border-color: var(--navy);
-}
-.tool .good,
-.tool .gap {
-  font-size: 0.9rem;
-}
-.tool .gap {
-  color: var(--muted);
-}
-.tool.ours {
-  border: 2.5px solid var(--red);
-  background: var(--sky);
-}
-.flow {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-  justify-items: center;
-}
-.flow-step {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  width: min(100%, 460px);
-  text-align: center;
-}
-.flow-step strong {
-  display: block;
-  width: 100%;
-  padding: 10px 14px 2px;
-  border: 2.5px solid var(--navy);
-  border-bottom: 0;
-  border-radius: 14px 14px 0 0;
-  background: #fff;
-}
-.flow-step > span {
-  display: block;
-  width: 100%;
-  padding: 0 14px 10px;
-  border: 2.5px solid var(--navy);
-  border-top: 0;
-  border-radius: 0 0 14px 14px;
-  background: #fff;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-.flow-step.key strong,
-.flow-step.key > span {
-  border-color: var(--red);
-  background: #fff5f6;
-}
-.flow-arrow {
-  color: var(--red);
-  margin: 2px 0;
-}
-.math {
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--sky);
-  font-size: 0.92rem;
-}
-.math p {
-  margin: 0;
-}
-.qa-list,
-.pivots {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.qa,
-.pivots li {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 12px 14px;
-  border-left: 5px solid var(--navy);
-  border-radius: 0 12px 12px 0;
-  background: #fff;
-  box-shadow: inset 0 0 0 2px var(--line);
-}
-.qa span,
-.pivots span {
-  font-size: 0.92rem;
-}
-.qa .did,
-.pivots .did {
-  color: var(--red);
-  font-weight: 700;
-}
-.pivots li {
-  border-left-color: var(--gold);
-}
-.qa cite {
-  font-size: 0.85rem;
-  color: var(--muted);
-  font-style: normal;
-}
-.sources {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding-left: 20px;
-  font-size: 0.95rem;
-}
 @media (max-width: 620px) {
   .top nav a {
     padding: 8px 10px;
@@ -1949,5 +1817,331 @@ a.tool:hover {
 @media print {
   .no-print {
     display: none !important;
+  }
+}
+
+/* Homepage: one big hero card with the steps inside, facts as a quiet strip */
+.hero {
+  display: grid;
+  gap: 26px;
+  padding: 44px 48px 30px;
+}
+.hero::before {
+  right: -40px;
+  top: -60px;
+  bottom: auto;
+  width: 420px;
+  height: 420px;
+}
+.hero-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+.hero-text {
+  max-width: 34rem;
+  gap: 18px;
+}
+.hero h1 {
+  font-size: clamp(2.4rem, 5.4vw, 3.9rem);
+  line-height: 1.02;
+}
+.hero .lead {
+  font-size: 1.15rem;
+}
+.hero-steps {
+  list-style: none;
+  margin: 0;
+  padding: 22px 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  border-top: 2px solid var(--line);
+}
+.hero-steps li {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-content: start;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.hero-steps li span {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-family: var(--display);
+  font-weight: 600;
+}
+.hero-steps li strong {
+  color: var(--navy);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.facts-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  padding: 18px 8px;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 22px;
+}
+.fact-item {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 2px 20px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+.fact-item + .fact-item {
+  border-left: 2px solid var(--line);
+}
+.fact-item strong {
+  font-family: var(--display);
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--red);
+}
+.fact-item small {
+  font-size: 0.8rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fact-item:hover small {
+  color: var(--navy);
+}
+@media (max-width: 900px) {
+  .hero-steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .hero {
+    padding: 26px 20px 22px;
+  }
+  .hero-main {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+  }
+  .hero-steps {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .facts-strip {
+    grid-template-columns: 1fr;
+    padding: 6px 4px;
+  }
+  .fact-item {
+    padding: 14px 16px;
+  }
+  .fact-item + .fact-item {
+    border-left: 0;
+    border-top: 2px solid var(--line);
+  }
+}
+
+/* Ballot screen: compact districts, collapsible race lists */
+.districts-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--navy);
+  font-size: 0.9rem;
+}
+.d-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--line);
+  font-weight: 700;
+}
+.ballot-list li {
+  align-items: center;
+}
+.race-section {
+  background: #fff;
+  border: 2.5px solid var(--navy);
+  border-radius: 20px;
+  padding: 0;
+}
+.race-section.empty {
+  display: grid;
+  gap: 6px;
+  padding: 16px 20px;
+}
+.race-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+.race-section summary::-webkit-details-marker {
+  display: none;
+}
+.race-section summary > span {
+  display: grid;
+  gap: 2px;
+}
+.race-section summary strong {
+  font-family: var(--display);
+  font-size: 1.15rem;
+}
+.race-section summary small {
+  color: var(--muted);
+  font-weight: 700;
+}
+.race-section .chev {
+  transition: transform 0.15s;
+}
+.race-section[open] .chev {
+  transform: rotate(180deg);
+}
+.race-section-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 20px 16px;
+}
+.race-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 28px;
+}
+.race-rows li {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  font-size: 0.92rem;
+}
+.race-rows li strong {
+  color: var(--navy);
+}
+.race-rows em {
+  font-style: normal;
+  color: var(--muted);
+}
+.race-rows .mini-toggle {
+  justify-self: start;
+  margin-top: 4px;
+}
+@media (max-width: 620px) {
+  .race-rows {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* How it works page: same panels as the rest of the site, in columns */
+.about .panel {
+  gap: 12px;
+}
+.about .panel h2 {
+  font-size: 1.25rem;
+}
+.about-head {
+  gap: 6px;
+}
+.about-grid {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+}
+.about-grid.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+.about-grid.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+.num-list,
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.num-list li {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  column-gap: 12px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.num-list li span {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-family: var(--display);
+  font-weight: 600;
+}
+.num-list li.key span {
+  background: var(--red);
+}
+.num-list li strong,
+.plain-list li strong {
+  color: var(--navy);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1rem;
+}
+.plain-list li {
+  display: grid;
+  gap: 1px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.plain-list li a {
+  color: var(--navy);
+}
+.plain-list li span {
+  color: var(--navy);
+  font-size: 0.98rem;
+}
+.plain-list li small {
+  color: var(--muted);
+}
+.plain-list li.ours strong {
+  color: var(--red);
+}
+.tester-stat {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--red);
+}
+.about .live-feedback {
+  background: none;
+  padding: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+@media (max-width: 900px) {
+  .about-grid.two,
+  .about-grid.three {
+    grid-template-columns: 1fr;
   }
 }

@@ -220,7 +220,9 @@ export default function Voter() {
   return (
     <div className="page">
       <Header active="voter" />
-      <main className={step === "sheet" ? "wrap wide" : "wrap"}>
+      <main
+        className={step === "sheet" || step === "intro" ? "wrap wide" : "wrap"}
+      >
         {back[step] && (
           <button className="back" onClick={back[step]}>
             <ArrowLeft size={18} /> Back
@@ -241,52 +243,55 @@ export default function Voter() {
         {step === "intro" && (
           <>
             <section className="hero">
-              <div className="hero-text">
-                <h1>Vote on policies, not ad budgets.</h1>
-                <p className="lead">
-                  Blind Ballot aligns you with every candidate on your local
-                  ballot, from county commissioner to judges, based on your
-                  policies.
-                </p>
-                <button
-                  className="primary big"
-                  onClick={() => setStep("address")}
-                >
-                  Find my ballot <ArrowRight size={20} />
-                </button>
+              <div className="hero-main">
+                <div className="hero-text">
+                  <h1>Vote on policies, not ad budgets.</h1>
+                  <p className="lead">
+                    Blind Ballot aligns you with every candidate on your local
+                    ballot, from county commissioner to judges, based on your
+                    policies.
+                  </p>
+                  <button
+                    className="primary big"
+                    onClick={() => setStep("address")}
+                  >
+                    Find my ballot <ArrowRight size={20} />
+                  </button>
+                </div>
+                <BlindBallotModel
+                  size={340}
+                  fallback={<Mascot size={220} blindfold />}
+                />
               </div>
-              <BlindBallotModel
-                size={260}
-                fallback={<Mascot size={200} blindfold />}
-              />
+              <ol className="hero-steps">
+                <li>
+                  <span>1</span>
+                  <strong>Your ballots</strong>
+                  All of your local races in one place
+                </li>
+                <li>
+                  <span>2</span>
+                  <strong>Your priorities</strong>
+                  Answer a few questions on local issues
+                </li>
+                <li>
+                  <span>3</span>
+                  <strong>Blind match</strong>
+                  Candidates ranked by policy
+                </li>
+                <li>
+                  <span>4</span>
+                  <strong>The Reveal</strong>
+                  Find out who the candidates are, their party, and their
+                  spending
+                </li>
+              </ol>
             </section>
-            <ol className="how">
-              <li>
-                <span>1</span>
-                <strong>Your ballots</strong>
-                All of your local races in one place
-              </li>
-              <li>
-                <span>2</span>
-                <strong>Your priorities</strong>
-                Answer a few questions on local issues
-              </li>
-              <li>
-                <span>3</span>
-                <strong>Blind match</strong>
-                Candidates ranked by policy
-              </li>
-              <li>
-                <span>4</span>
-                <strong>The Reveal</strong>
-                Find out who the candidates are, their party, and their spending
-              </li>
-            </ol>
-            <section className="facts" aria-label="Why it matters">
+            <section className="facts-strip" aria-label="Why it matters">
               {FACTS.map((f) => (
                 <a
                   key={f.stat}
-                  className="fact"
+                  className="fact-item"
                   href={f.url}
                   target="_blank"
                   rel="noreferrer"
@@ -393,9 +398,8 @@ export default function Voter() {
                 </p>
                 <h1>Your ballot in {real.local.county} County</h1>
                 <p className="lead">
-                  Here are your real candidates. None have answered our
-                  questions yet, so there’s nothing to match. Want to see how
-                  matching works?
+                  Your real candidates are below. None have answered our
+                  questions yet, so try the demo to see the matching.
                 </p>
                 <div className="sheet-actions">
                   <button
@@ -409,45 +413,34 @@ export default function Voter() {
             ) : (
               <section className="panel step">
                 <p className="eyebrow-chip">
-                  <MapPin size={14} /> {county.name}, Ohio
+                  <MapPin size={14} /> {county.name} demo
                 </p>
                 <h1>
                   Your ballot has {county.races.length + county.measures.length}{" "}
                   local choices
                 </h1>
                 <p className="lead">
-                  These are the races people most often skip or guess on. You’ll
-                  answer {questions.length} quick questions about the issues
-                  these offices decide.
+                  Answer {questions.length} quick questions. Candidates are
+                  matched with names, parties and money hidden.
                 </p>
                 <ul className="ballot-list">
                   {county.races.map((r) => (
                     <li key={r.id}>
-                      <div>
-                        <strong>{r.office}</strong>
-                        <span>{r.what}</span>
-                      </div>
+                      <strong>{r.office}</strong>
                       <small>
                         {r.candidates} candidates
-                        {r.vote_for > 1 ? `, vote for ${r.vote_for}` : ""}
-                        {!r.partisan ? ", no party on ballot" : ""}
+                        {r.vote_for > 1 ? `, pick ${r.vote_for}` : ""}
                       </small>
                     </li>
                   ))}
                   {county.measures.map((m) => (
                     <li key={m.id} className="measure">
-                      <div>
-                        <strong>{m.title}</strong>
-                        <span>{m.what}</span>
-                      </div>
+                      <strong>{m.title}</strong>
                       <small>Yes or no</small>
                     </li>
                   ))}
                 </ul>
-                <p className="demo-note">
-                  Demo local ballot: real offices, fictional candidates, so you
-                  can try the full blind match.
-                </p>
+                <p className="fine">Real offices, made-up candidates.</p>
                 <button
                   className="primary big"
                   onClick={() => {
@@ -459,14 +452,7 @@ export default function Voter() {
                 </button>
               </section>
             )}
-            <LocalRaces
-              real={real}
-              title={
-                county
-                  ? `Real candidates in ${real.local.county} County`
-                  : "Local races"
-              }
-            />
+            <LocalRaces real={real} open={!county} />
             <StatewideRaces real={real} />
           </>
         )}
