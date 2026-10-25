@@ -59,9 +59,7 @@ test("voter: blind match, reveal, and ballot sheet", async ({ page }) => {
     page.getByRole("heading", { name: "Your ballot has 4 local choices" }),
   ).toBeVisible();
   // Real statewide races appear for every Ohio address.
-  await expect(
-    page.getByRole("heading", { name: "Statewide races on every Ohio ballot" }),
-  ).toBeVisible();
+  await page.getByText("Statewide races", { exact: true }).click();
   await expect(page.getByText("Sherrod Brown")).toBeVisible();
   await page.getByRole("button", { name: "Start the questions" }).click();
   await answerAll(page, 0);
@@ -194,9 +192,10 @@ test("outside the demo counties: real local candidates by ZIP", async ({
     page.getByRole("heading", { name: "Your ballot in Summit County" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Local races" }),
+    page.getByText("Real candidates in Summit County"),
   ).toBeVisible();
   await expect(page.getByText("Emilia Sykes")).toBeVisible();
+  await page.getByText("Statewide races", { exact: true }).click();
   await expect(page.getByText("Sherrod Brown")).toBeVisible();
 });
 

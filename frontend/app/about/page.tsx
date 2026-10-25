@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ArrowDown, ExternalLink } from "lucide-react";
 import Header from "@/components/Header";
 import { LiveFeedback } from "@/components/Feedback";
 import { FEEDBACK, FEEDBACK_SUMMARY } from "@/lib/feedback";
@@ -7,319 +6,223 @@ import { FEEDBACK, FEEDBACK_SUMMARY } from "@/lib/feedback";
 export const metadata: Metadata = {
   title: "How it works · Blind Ballot",
   description:
-    "What Blind Ballot does differently, how the matching works, where the data comes from, and what we changed along the way.",
+    "What Blind Ballot does differently, how matching works, where the data comes from, and what we changed along the way.",
 };
 
-const TOOLS = [
-  {
-    name: "Ballotpedia sample ballot",
-    good: "Candidate bios, past results and survey answers.",
-    gap: "Local races only in the 100 largest U.S. cities. Names and parties come first.",
-    url: "https://civictech.guide/projects/ballotpedia-sample-ballot-lookup",
-  },
-  {
-    name: "VOTE411 (League of Women Voters)",
-    good: "Candidates answer the same questions in their own words.",
-    gap: "You read and compare every answer yourself, next to names and parties.",
-    url: "https://my.lwv.org/node/65462",
-  },
-  {
-    name: "iSideWith",
-    good: "Issue quiz that matches you to candidates, including local ones.",
-    gap: "We didn’t find a step that hides names, parties and money before you see a match.",
-    url: "https://www.builtinla.com/articles/isidewith-online-political-quiz-changing-way-we-vote",
-  },
-  {
-    name: "BallotReady",
-    good: "Personal ballot with local races and candidate positions.",
-    gap: "Profiles lead with names, and include campaign ads.",
-    url: "https://news.medill.northwestern.edu/chicago/vote-informed-ballotready-stresses-local-races/",
-  },
+const FLOW = [
+  ["Your ZIP or address", "Census data finds your districts"],
+  ["Your real ballot", "Official lists from 80 Ohio counties"],
+  ["Your priorities", "8 local issues, and how much each matters"],
+  ["Blind match", "Positions only. No names, parties or money"],
+  ["The reveal", "Who they are, their party, their spending"],
+  ["Your ballot sheet", "Print it and bring it to the booth"],
 ];
 
-const FLOW = [
+const TOOLS = [
   [
-    "Your address or ZIP",
-    "U.S. Census Geocoder finds your county and districts.",
+    "Ballotpedia",
+    "Local races only in the 100 largest cities",
+    "https://civictech.guide/projects/ballotpedia-sample-ballot-lookup",
   ],
   [
-    "Your real ballot",
-    "Official candidate lists from 80 Ohio county boards, plus the 8 statewide races.",
+    "VOTE411",
+    "Answers to read yourself, names first",
+    "https://my.lwv.org/node/65462",
   ],
   [
-    "Your priorities",
-    "Plain questions on 8 local issues, and how much each one matters to you.",
+    "iSideWith",
+    "Quiz matching, but no blind step we could find",
+    "https://www.builtinla.com/articles/isidewith-online-political-quiz-changing-way-we-vote",
   ],
   [
-    "Blind match",
-    "Scored on positions only. Names, parties and money never reach the math.",
+    "BallotReady",
+    "Profiles lead with names and ads",
+    "https://news.medill.northwestern.edu/chicago/vote-informed-ballotready-stresses-local-races/",
   ],
-  [
-    "The reveal",
-    "Names, party, backers and campaign money, next to your match.",
-  ],
-  ["Your ballot sheet", "A printable list to bring into the booth."],
 ];
 
 const QUESTIONS = [
   [
-    "Does money actually decide races?",
-    "Found that the bigger spender won 91% of U.S. House races over four cycles (OpenSecrets data).",
-    "Made money the last thing you see, never the first.",
+    "Does money decide races?",
+    "The bigger spender wins 91% of House races. So money comes last.",
   ],
   [
     "Why do people skip local races?",
-    "Knox County, Ohio: about 10,000 fewer votes for state school board than for president, in the race with no party labels.",
-    "Built for the races with the least information.",
+    "No party labels, no info. So we built for those races.",
   ],
+  ["How sure is a match?", "We rerun it 2,000 times and flag close calls."],
   [
-    "How sure is a match?",
-    "People aren’t certain of their own answers. We rerun every match 2,000 times with small changes.",
-    "Each match says how often it holds up, and flags close calls.",
-  ],
-  [
-    "Can we get every Ohio county’s real ballot?",
-    "No statewide feed exists, and Google’s Civic API has no Ohio local races.",
-    "Collected 80 of 88 county lists ourselves, from each board’s own document.",
+    "Can we get every county’s ballot?",
+    "No feed existed. We collected 80 of 88 ourselves.",
   ],
 ];
 
-const PIVOTS = [
+const CHANGES = [
   [
-    "Started: PollCREW",
-    "A poll-worker staffing tool. We couldn’t say in one line what a user walked away with.",
-    "Lesson: one clear output. That became the printable ballot sheet.",
+    "PollCREW → Blind Ballot",
+    "No clear output, so we built around one: the ballot sheet.",
   ],
   [
-    "Data wall",
-    "No statewide candidate feed. Some county sites blocked automated reading.",
-    "Read each county’s official PDF directly, then checked names against the source.",
+    "Blocked county sites",
+    "Read each official PDF and checked names against it.",
   ],
-  [
-    "Results too busy",
-    "Our own testing: a grid of every race at once was overwhelming.",
-    "One race per screen, with Next, and plainer words.",
-  ],
-  [
-    "The ballot changed mid-race",
-    "A 4th District appeals judge candidate died. Older county notices still listed him.",
-    "Cross-checked newer notices and updated all 11 counties.",
-  ],
-  [
-    "Address friction",
-    "One long address box failed for ZIP-only and some addresses.",
-    "ZIP is the only required box. Street narrows to your exact districts.",
-  ],
+  ["Busy results", "One race per screen, plainer words."],
+  ["A candidate died mid-race", "Caught it and fixed 11 counties."],
+  ["Address errors", "Only a ZIP is required now."],
 ];
 
-const MISSING = [
-  "Coshocton",
-  "Henry",
-  "Huron",
-  "Lucas",
-  "Mercer",
-  "Morrow",
-  "Sandusky",
-  "Williams",
+const SOURCES: [string, string, string?][] = [
+  [
+    "Districts",
+    "U.S. Census Geocoder",
+    "https://geocoding.geo.census.gov/geocoder/",
+  ],
+  [
+    "ZIP to county",
+    "Census 2020 file",
+    "https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/",
+  ],
+  ["Local candidates", "80 county boards (8 not posted)"],
+  ["Statewide", "Certified county lists"],
+  ["Money", "FEC filings", "https://api.open.fec.gov/developers/"],
 ];
 
 export default function About() {
   return (
     <div className="page">
       <Header active="about" />
-      <main className="wrap about">
-        <section className="panel">
+      <main className="wrap wide about">
+        <section className="panel about-head">
           <h1>How Blind Ballot works</h1>
           <p className="lead">
-            Most voter tools show you the name and party first. We show them
-            last, after you’ve matched on what candidates would actually do.
+            Other voter tools show the name and party first. We show them last.
           </p>
         </section>
 
-        <section className="panel">
-          <h2>What already exists</h2>
-          <p className="small">
-            We studied four popular tools before building. Each does something
-            well. None we found hide names, parties and money until after you
-            match.
-          </p>
-          <div className="tool-grid">
-            {TOOLS.map((t) => (
-              <a
-                key={t.name}
-                className="tool"
-                href={t.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <strong>
-                  {t.name} <ExternalLink size={13} />
-                </strong>
-                <span className="good">{t.good}</span>
-                <span className="gap">{t.gap}</span>
-              </a>
-            ))}
-            <div className="tool ours">
-              <strong>Blind Ballot</strong>
-              <span className="good">
-                Matches you on local issues with names, parties and money
-                hidden. Then shows who they are and what they spent.
-              </span>
-              <span className="gap">
-                Real candidates in 80 Ohio counties. Matching needs candidates
-                to answer, through the free portal.
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <section className="panel">
-          <h2>From your address to your ballot sheet</h2>
-          <ol className="flow">
-            {FLOW.map(([title, text], i) => (
-              <li
-                key={title}
-                className={i === 3 ? "flow-step key" : "flow-step"}
-              >
-                <strong>{title}</strong>
-                <span>{text}</span>
-                {i < FLOW.length - 1 && (
-                  <ArrowDown className="flow-arrow" size={20} aria-hidden />
-                )}
+        <div className="about-grid two">
+          <section className="panel">
+            <h2>The flow</h2>
+            <ol className="num-list">
+              {FLOW.map(([title, text], i) => (
+                <li key={title} className={i === 3 ? "key" : undefined}>
+                  <span>{i + 1}</span>
+                  <strong>{title}</strong>
+                  {text}
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section className="panel">
+            <h2>What already exists</h2>
+            <ul className="plain-list">
+              {TOOLS.map(([name, gap, url]) => (
+                <li key={name}>
+                  <a href={url} target="_blank" rel="noreferrer">
+                    <strong>{name}</strong>
+                  </a>
+                  {gap}
+                </li>
+              ))}
+              <li className="ours">
+                <strong>Blind Ballot</strong>
+                Hides names, parties and money until after you match
               </li>
-            ))}
-          </ol>
-          <div className="math">
-            <p>
-              <strong>Match score:</strong> on each issue an office handles,
-              agreement = 1 − |you − candidate| ÷ 4, on a −2 to +2 scale,
-              weighted by how much you said it matters.
-            </p>
-            <p>
-              <strong>Confidence:</strong> 2,000 reruns with your answers nudged
-              slightly. “Stays on top 84% of the time” means it held up in 84%
-              of them.
-            </p>
-            <p>
-              <strong>Money-blind by design:</strong> the matching code only
-              receives positions. A test proves that changing a candidate’s
-              money, party or backers can’t change any match.
-            </p>
-          </div>
-        </section>
+            </ul>
+          </section>
+        </div>
 
-        <section className="panel">
-          <h2>Questions we asked, and what we did</h2>
-          <div className="qa-list">
-            {QUESTIONS.map(([q, found, did]) => (
-              <div key={q} className="qa">
-                <strong>{q}</strong>
-                <span>{found}</span>
-                <span className="did">{did}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+        <div className="about-grid three">
+          <section className="panel">
+            <h2>Questions we asked</h2>
+            <ul className="plain-list">
+              {QUESTIONS.map(([q, a]) => (
+                <li key={q}>
+                  <strong>{q}</strong>
+                  {a}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="panel">
+            <h2>What we changed</h2>
+            <ul className="plain-list">
+              {CHANGES.map(([what, fix]) => (
+                <li key={what}>
+                  <strong>{what}</strong>
+                  {fix}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="panel">
+            <h2>What testers told us</h2>
+            <p className="tester-stat">{FEEDBACK_SUMMARY}</p>
+            <ul className="plain-list">
+              {FEEDBACK.map((f) => (
+                <li key={f.quote}>
+                  <span>“{f.quote}”</span>
+                  <small>{f.who}</small>
+                </li>
+              ))}
+            </ul>
+            <LiveFeedback />
+          </section>
+        </div>
 
-        <section className="panel">
-          <h2>What broke, and how we changed course</h2>
-          <ol className="pivots">
-            {PIVOTS.map(([title, problem, change]) => (
-              <li key={title}>
-                <strong>{title}</strong>
-                <span>{problem}</span>
-                <span className="did">{change}</span>
+        <div className="about-grid three">
+          <section className="panel">
+            <h2>The math</h2>
+            <ul className="plain-list">
+              <li>
+                <strong>Match</strong>
+                Agreement on each issue, weighted by how much you care
               </li>
-            ))}
-          </ol>
-        </section>
-
-        <section className="panel">
-          <h2>What testers told us</h2>
-          <p className="lead">{FEEDBACK_SUMMARY}</p>
-          <div className="qa-list">
-            {FEEDBACK.map((f) => (
-              <blockquote key={f.quote} className="qa">
-                <span>“{f.quote}”</span>
-                <cite>{f.who}</cite>
-              </blockquote>
-            ))}
-          </div>
-          <LiveFeedback />
-        </section>
-
-        <section className="panel">
-          <h2>Where the data comes from</h2>
-          <ul className="sources">
-            <li>
-              <strong>Districts:</strong>{" "}
-              <a
-                href="https://geocoding.geo.census.gov/geocoder/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                U.S. Census Bureau Geocoder
-              </a>
-              , 2026 Ohio legislative and congressional maps.
-            </li>
-            <li>
-              <strong>ZIP to county:</strong>{" "}
-              <a
-                href="https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Census 2020 ZIP-to-county file
-              </a>
-              .
-            </li>
-            <li>
-              <strong>Local candidates:</strong> each county board of elections’
-              own published list, linked on every ballot. 80 of 88 counties. Not
-              posted yet: {MISSING.join(", ")}.
-            </li>
-            <li>
-              <strong>Statewide candidates:</strong> certified lists from the
-              Wood and Hamilton County boards.
-            </li>
-            <li>
-              <strong>Campaign money:</strong>{" "}
-              <a
-                href="https://api.open.fec.gov/developers/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                FEC
-              </a>{" "}
-              filings for U.S. Senate.
-            </li>
-            <li>
-              <strong>Demo matching:</strong> Delaware and Franklin County use
-              real offices with made-up candidates, so you can try the full
-              blind match.
-            </li>
-          </ul>
-        </section>
-
-        <section className="panel">
-          <h2>If it reached 10× the people</h2>
-          <ul className="sources">
-            <li>
-              Every state publishes ballots through county or local boards, so
-              the same collection works anywhere. The matching math doesn’t
-              change.
-            </li>
-            <li>
-              The data is public and free. The real cost is getting candidates
-              to answer. VOTE411’s questionnaires got a 51% median response in
-              2024, so candidates do answer when asked.
-            </li>
-            <li>
-              Partners: county boards, the League of Women Voters, campus voter
-              drives.
-            </li>
-          </ul>
-        </section>
+              <li>
+                <strong>Confidence</strong>
+                2,000 reruns with your answers nudged slightly
+              </li>
+              <li>
+                <strong>Money-blind</strong>
+                The math only sees positions, and a test proves it
+              </li>
+            </ul>
+          </section>
+          <section className="panel">
+            <h2>Where the data comes from</h2>
+            <ul className="plain-list">
+              {SOURCES.map(([what, from, url]) => (
+                <li key={what}>
+                  <strong>{what}</strong>
+                  {url ? (
+                    <a href={url} target="_blank" rel="noreferrer">
+                      {from}
+                    </a>
+                  ) : (
+                    from
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="panel">
+            <h2>At 10× the people</h2>
+            <ul className="plain-list">
+              <li>
+                <strong>Any state</strong>
+                Every state publishes ballots through local boards
+              </li>
+              <li>
+                <strong>Free data</strong>
+                The real work is getting candidates to answer. VOTE411 gets
+                about half to respond
+              </li>
+              <li>
+                <strong>Partners</strong>
+                County boards, League of Women Voters, campus voter drives
+              </li>
+            </ul>
+          </section>
+        </div>
       </main>
       <footer className="foot">
         Blind Ballot, HackOHI/O 2026. Nonpartisan. No ads, no paid placement,

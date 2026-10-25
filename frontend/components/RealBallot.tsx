@@ -1,7 +1,18 @@
 "use client";
 import { useState } from "react";
-import { BadgeCheck, ExternalLink, Landmark, MapPin, Vote } from "lucide-react";
+import { ChevronDown, ExternalLink, MapPin } from "lucide-react";
 import { Districts, LocalRace, LookupResult, bigMoney } from "@/lib/api";
+
+const SHORT: Record<string, string> = {
+  Democratic: "D",
+  Republican: "R",
+  Libertarian: "L",
+  Independent: "I",
+  Nonparty: "no party",
+  "Other party": "other",
+};
+const short = (party: string | null) =>
+  party ? (SHORT[party] ?? party) : null;
 
 export function DistrictsCard({
   districts,
@@ -12,239 +23,190 @@ export function DistrictsCard({
 }) {
   if (!districts)
     return (
-      <section className="real-card">
-        <h2>
-          <MapPin size={20} /> Your districts
-        </h2>
-        <p className="small">{note}</p>
+      <p className="districts-line">
+        <MapPin size={16} /> {note}
+      </p>
+    );
+  const chips = [
+    districts.county,
+    districts.city || districts.township,
+    districts.school_district,
+    districts.ohio_house && `Ohio House ${districts.ohio_house}`,
+    districts.ohio_senate && `Ohio Senate ${districts.ohio_senate}`,
+    districts.us_house && `U.S. House ${districts.us_house}`,
+  ].filter(Boolean) as string[];
+  return (
+    <div className="districts-line" aria-label="Your districts">
+      <MapPin size={16} />
+      {chips.map((c) => (
+        <span key={c} className="d-chip">
+          {c}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function raceTitle(r: LocalRace) {
+  if (["house", "senate", "congress", "appeals"].includes(r.kind) && r.district)
+    return `${r.office} ${r.district}`;
+  return r.office;
+}
+
+function Section({
+  title,
+  count,
+  open,
+  children,
+}: {
+  title: string;
+  count: string;
+  open: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="race-section" open={open}>
+      <summary>
+        <span>
+          <strong>{title}</strong>
+          <small>{count}</small>
+        </span>
+        <ChevronDown size={20} className="chev" aria-hidden />
+      </summary>
+      <div className="race-section-body">{children}</div>
+    </details>
+  );
+}
+
+export function LocalRaces({
+  real,
+  open = false,
+}: {
+  real: LookupResult;
+  open?: boolean;
+}) {
+  const local = real.local;
+  if (!local.found)
+    return (
+      <section className="race-section empty">
+        <strong>Real local candidates</strong>
+        <p className="small">
+          {local.county} County hasn’t posted its November list online yet.{" "}
+          <a href={real.links.county_boards} target="_blank" rel="noreferrer">
+            Find your county board <ExternalLink size={12} />
+          </a>
+        </p>
       </section>
     );
-  const rows = [
-    ["County", districts.county],
-    ["City or village", districts.city],
-    ["Township", districts.township],
-    ["School district", districts.school_district],
-    ["Ohio House", districts.ohio_house && `District ${districts.ohio_house}`],
-    [
-      "Ohio Senate",
-      districts.ohio_senate && `District ${districts.ohio_senate}`,
-    ],
-    ["U.S. House", districts.us_house && `District ${districts.us_house}`],
-  ].filter(([, v]) => v) as [string, string][];
   return (
-    <section className="real-card">
-      <div className="real-head">
-        <h2>
-          <MapPin size={20} /> Your districts
-        </h2>
-        <span className="real-badge">
-          <BadgeCheck size={16} /> Real data
-        </span>
-      </div>
-      <dl className="districts">
-        {rows.map(([k, v]) => (
-          <div key={k}>
-            <dt>{k}</dt>
-            <dd>{v}</dd>
-          </div>
+    <Section
+      title={`Real candidates in ${local.county} County`}
+      count={`${local.races.length} races`}
+      open={open}
+    >
+      <ul className="race-rows">
+        {local.races.map((race, i) => (
+          <li key={`${race.office}-${race.district}-${i}`}>
+            <strong>{raceTitle(race)}</strong>
+            <span>
+              {race.candidates.map((c, j) => (
+                <span key={c.name} className="cand-inline">
+                  {j > 0 && " · "}
+                  {c.name}
+                  {short(c.party) && <em> ({short(c.party)})</em>}
+                </span>
+              ))}
+              {race.candidates.length === 1 && (
+                <em className="unopposed"> unopposed</em>
+              )}
+            </span>
+          </li>
         ))}
-      </dl>
+      </ul>
       <p className="fine">
-        From the U.S. Census Bureau Geocoder, using Ohio’s 2026 legislative and
-        congressional maps. Matched: {districts.matched_address}
+        {local.narrowed
+          ? "Narrowed to your districts. "
+          : "Every race in the county. Add your street to narrow it. "}
+        From the{" "}
+        <a href={local.source_url} target="_blank" rel="noreferrer">
+          county board’s list
+        </a>
+        . Write-ins not shown.
       </p>
-    </section>
+    </Section>
   );
 }
 
 export function StatewideRaces({ real }: { real: LookupResult }) {
   const [showMoney, setShowMoney] = useState(false);
   return (
-    <section className="real-card statewide">
-      <div className="real-head">
-        <h2>
-          <Landmark size={20} /> Statewide races on every Ohio ballot
-        </h2>
-        <span className="real-badge">
-          <BadgeCheck size={16} /> Real candidates
-        </span>
-      </div>
-      <p className="small">
-        Real certified candidates. Blind Ballot never guesses a real candidate’s
-        positions, so these races can be matched once candidates answer in the
-        candidate portal.
-      </p>
-      <div className="statewide-list">
+    <Section
+      title="Statewide races"
+      count={`${real.statewide.length} races, on every Ohio ballot`}
+      open={false}
+    >
+      <ul className="race-rows">
         {real.statewide.map((race) => (
-          <div key={race.id} className="sw-race">
-            <div className="sw-office">
-              <strong>{race.office}</strong>
-              <span>{race.detail}</span>
-            </div>
-            <ul>
-              {race.candidates.map((c) => (
-                <li key={c.name}>
-                  <span className="sw-name">
-                    {c.name}
-                    {c.running_mate && <small> and {c.running_mate}</small>}
-                  </span>
-                  <span className="chip small">{c.party}</span>
-                  {showMoney && race.money_available != null && (
-                    <span className="sw-money">
+          <li key={race.id}>
+            <strong>{race.office}</strong>
+            <span>
+              {race.candidates.map((c, j) => (
+                <span key={c.name} className="cand-inline">
+                  {j > 0 && " · "}
+                  {c.name}
+                  {c.running_mate && ` and ${c.running_mate}`}
+                  <em> ({short(c.party)})</em>
+                  {showMoney && race.money_available && (
+                    <em className="money-inline">
+                      {" "}
                       {c.money
-                        ? `Raised ${bigMoney(c.money.receipts)}, spent ${bigMoney(c.money.disbursements)}`
-                        : "No FEC filing found"}
-                    </span>
+                        ? `raised ${bigMoney(c.money.receipts)}`
+                        : "no FEC filing"}
+                    </em>
                   )}
-                </li>
+                </span>
               ))}
-            </ul>
-            <p className="sw-pending">No candidate has answered yet.</p>
+            </span>
             {race.money_available != null && (
-              <div className="sw-money-row">
-                <button
-                  role="switch"
-                  aria-checked={showMoney}
-                  aria-label="Show campaign money"
-                  className={showMoney ? "mini-toggle on" : "mini-toggle"}
-                  onClick={() => setShowMoney(!showMoney)}
-                >
-                  <span className="toggle-track" aria-hidden>
-                    <span className="toggle-knob" />
-                  </span>
-                  {showMoney ? "Hide campaign money" : "Show campaign money"}
-                </button>
-                {showMoney && (
-                  <span className="fine">
-                    {race.money_available
-                      ? `FEC filings, as of ${(race.candidates.find((c) => c.money?.as_of)?.money?.as_of ?? "").slice(0, 10)}. `
-                      : "FEC data isn’t available right now. "}
-                    {race.money_source && (
-                      <a
-                        href={race.money_source}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        See it on FEC.gov <ExternalLink size={12} />
-                      </a>
-                    )}
-                  </span>
-                )}
-              </div>
+              <button
+                role="switch"
+                aria-checked={showMoney}
+                aria-label="Show campaign money"
+                className={showMoney ? "mini-toggle on" : "mini-toggle"}
+                onClick={() => setShowMoney(!showMoney)}
+              >
+                <span className="toggle-track" aria-hidden>
+                  <span className="toggle-knob" />
+                </span>
+                {showMoney ? "Hide money" : "Show money"}
+              </button>
             )}
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
       <p className="fine">
-        Source:{" "}
+        From the{" "}
         <a href={real.statewide_source.url} target="_blank" rel="noreferrer">
-          Wood County Board of Elections certified list (Aug 26, 2026)
+          certified state list
         </a>
-        , cross-checked with{" "}
-        <a
-          href={real.statewide_source.cross_check}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Hamilton County’s (Aug 21, 2026)
-        </a>
-        . Write-in candidates aren’t listed.
+        .{" "}
+        {showMoney && (
+          <>
+            Money from{" "}
+            <a
+              href={
+                real.statewide.find((r) => r.money_source)?.money_source ??
+                "https://www.fec.gov"
+              }
+              target="_blank"
+              rel="noreferrer"
+            >
+              FEC filings
+            </a>
+            .
+          </>
+        )}
       </p>
-    </section>
-  );
-}
-
-const PARTY_SHORT: Record<string, string> = {
-  Democratic: "Dem",
-  Republican: "Rep",
-  Libertarian: "Lib",
-  Independent: "Ind",
-  Nonparty: "No party",
-};
-
-function raceTitle(r: LocalRace) {
-  if (["house", "senate", "congress", "appeals"].includes(r.kind) && r.district)
-    return `${r.office}, District ${r.district}`;
-  return r.office;
-}
-
-export function LocalRaces({
-  real,
-  title,
-}: {
-  real: LookupResult;
-  title: string;
-}) {
-  const local = real.local;
-  if (!local.found)
-    return (
-      <section className="real-card">
-        <h2>
-          <Vote size={20} /> {title}
-        </h2>
-        <p className="small">
-          {local.county} County hasn’t posted its November candidate list online
-          yet, so we can’t show it. Your county board of elections has it.
-        </p>
-        <a
-          className="secondary as-button"
-          href={real.links.county_boards}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Find your county board <ExternalLink size={16} />
-        </a>
-      </section>
-    );
-  return (
-    <section className="real-card statewide">
-      <div className="real-head">
-        <h2>
-          <Vote size={20} /> {title}
-        </h2>
-        <span className="real-badge">
-          <BadgeCheck size={16} /> Real candidates
-        </span>
-      </div>
-      <p className="small">
-        {local.narrowed
-          ? `${local.races.length} local races for your address.`
-          : `All ${local.races.length} local races in ${local.county} County. Add your street address to see only your districts.`}{" "}
-        No candidate has answered yet.
-      </p>
-      <div className="statewide-list">
-        {local.races.map((race, i) => (
-          <div key={`${race.office}-${race.district}-${i}`} className="sw-race">
-            <div className="sw-office">
-              <strong>{raceTitle(race)}</strong>
-              {race.kind === "part" && <span>Only some voters</span>}
-            </div>
-            <ul>
-              {race.candidates.map((c) => (
-                <li key={c.name}>
-                  <span className="sw-name">{c.name}</span>
-                  {c.party && (
-                    <span className="chip small">
-                      {PARTY_SHORT[c.party] ?? c.party}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {race.candidates.length === 1 && (
-              <p className="sw-pending">Unopposed</p>
-            )}
-          </div>
-        ))}
-      </div>
-      <p className="fine">
-        Source:{" "}
-        <a href={local.source_url} target="_blank" rel="noreferrer">
-          {local.county} County Board of Elections
-        </a>
-        {local.as_of ? ` (${local.as_of})` : ""}. Parties as printed there.
-        Write-in candidates aren’t listed.
-      </p>
-    </section>
+    </Section>
   );
 }
