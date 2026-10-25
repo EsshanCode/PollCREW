@@ -1,5 +1,21 @@
 import { test, expect } from "@playwright/test";
 
+test("animation timing tolerates a frame timestamp before the effect started", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.addInitScript(() => {
+    const requestFrame = window.requestAnimationFrame.bind(window);
+    // Browsers share a timestamp across a frame; it can precede effect startup.
+    window.requestAnimationFrame = (callback) => requestFrame((time) => callback(time - 50));
+  });
+  await page.goto("/additional-features");
+  await page.getByRole("button", { name: "02 Weight", exact: true }).click();
+  await page.waitForTimeout(150);
+  await expect(page.getByRole("heading", { name: "Your priorities shape the calculation." })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("additional features explains matching, recalculates priorities, and reveals without rescoring", async ({ page }) => {
   const errors: string[] = [];
   const apiRequests: string[] = [];
