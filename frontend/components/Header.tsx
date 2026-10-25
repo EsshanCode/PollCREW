@@ -5,7 +5,7 @@ export default function Header({ active }: { active: "voter" | "candidate" }) {
     <>
       <header className="top">
         <a className="brand" href="/" aria-label="Blind Ballot home">
-          <LogoMark size={40} />
+          <LogoMark size={40} onDark />
           <span>
             Blind<span>Ballot</span>
           </span>

@@ -1,4 +1,6 @@
-// Original Blind Ballot artwork: a friendly ballot box (with an optional blindfold) and a star logo.
+// Original Blind Ballot artwork: a friendly ballot box (with an optional blindfold) and a flag-globe logo.
+import { useId } from "react";
+
 const NAVY = "#1D2B53";
 const RED = "#C8243B";
 const GOLD = "#F2B632";
@@ -124,11 +126,13 @@ export function Star({
   cy,
   r,
   fill = GOLD,
+  stroke = NAVY,
 }: {
   cx: number;
   cy: number;
   r: number;
   fill?: string;
+  stroke?: string;
 }) {
   const points = Array.from({ length: 10 }, (_, i) => {
     const angle = (Math.PI / 5) * i - Math.PI / 2;
@@ -139,27 +143,93 @@ export function Star({
     <polygon
       points={points}
       fill={fill}
-      stroke={NAVY}
+      stroke={stroke}
       strokeWidth={Math.max(2, r / 5)}
       strokeLinejoin="round"
     />
   );
 }
 
-export function LogoMark({ size = 40 }: { size?: number }) {
+// Cartoon desk globe painted as the U.S. flag. Same artwork as app/icon.svg (the favicon).
+export function LogoMark({
+  size = 40,
+  onDark = false,
+}: {
+  size?: number;
+  onDark?: boolean;
+}) {
+  const line = onDark ? "#fff" : NAVY;
+  const clip = `globe-${useId().replace(/:/g, "")}`;
+  const stars: [number, number][] = [
+    [15, 9.5],
+    [21, 9.5],
+    [12, 15],
+    [18, 15],
+  ];
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <rect
-        x="3"
-        y="3"
-        width="42"
-        height="42"
-        rx="12"
-        fill={RED}
-        stroke="#fff"
+      <defs>
+        <clipPath id={clip}>
+          <circle cx="24" cy="21" r="16" />
+        </clipPath>
+      </defs>
+      <path
+        d="M10 35 A19.8 19.8 0 0 0 38 7"
+        fill="none"
+        stroke={GOLD}
+        strokeWidth="3.2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M24 40 V43"
+        stroke={line}
+        strokeWidth="3.2"
+        strokeLinecap="round"
+      />
+      <rect x="14" y="42.2" width="20" height="4" rx="2" fill={line} />
+      <g clipPath={`url(#${clip})`}>
+        <rect x="6" y="3" width="36" height="36" fill="#fff" />
+        {[5.6, 14, 22.4, 30.8].map((y) => (
+          <rect key={y} x="6" y={y} width="36" height="4.2" fill={RED} />
+        ))}
+        <rect x="6" y="3" width="19" height="17.8" fill={NAVY} />
+        {stars.map(([x, y]) => (
+          <Star
+            key={`${x}-${y}`}
+            cx={x}
+            cy={y}
+            r={2.8}
+            fill="#fff"
+            stroke="none"
+          />
+        ))}
+        <ellipse
+          cx="24"
+          cy="21"
+          rx="7"
+          ry="16"
+          fill="none"
+          stroke={NAVY}
+          strokeWidth="1.2"
+          opacity="0.28"
+        />
+        <path
+          d="M29.5 8 A13.5 13.5 0 0 1 36 15.5"
+          fill="none"
+          stroke="#fff"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          opacity="0.9"
+        />
+      </g>
+      <circle
+        cx="24"
+        cy="21"
+        r="16"
+        fill="none"
+        stroke={line}
         strokeWidth="3"
       />
-      <Star cx={24} cy={25} r={13} fill="#fff" />
     </svg>
   );
 }
