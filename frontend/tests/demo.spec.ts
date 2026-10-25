@@ -185,7 +185,21 @@ test("outside the demo counties: real local candidates by ZIP", async ({
   await expect(
     page.getByRole("heading", { name: "Your ballot in Summit County" }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Local races" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Local races" }),
+  ).toBeVisible();
   await expect(page.getByText("Emilia Sykes")).toBeVisible();
   await expect(page.getByText("Sherrod Brown")).toBeVisible();
+});
+
+test("how it works page explains the method and sources", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "How it works" }).click();
+  await expect(
+    page.getByRole("heading", { name: "How Blind Ballot works" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "What already exists" }),
+  ).toBeVisible();
+  await expect(page.getByText("Blind match", { exact: true })).toBeVisible();
 });
