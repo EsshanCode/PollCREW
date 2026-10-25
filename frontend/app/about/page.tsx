@@ -43,8 +43,8 @@ const TOOLS = [
 
 const QUESTIONS = [
   [
-    "Does money decide races?",
-    "The bigger spender wins 91% of House races. So money comes last.",
+    "Does money predict who wins?",
+    "The bigger spender won 91% of House races. So money comes last.",
   ],
   [
     "Why do people skip local races?",
@@ -84,7 +84,15 @@ const SOURCES: [string, string, string?][] = [
   ],
   ["Local candidates", "80 county boards (8 not posted)"],
   ["Statewide", "Certified county lists"],
-  ["Money", "FEC filings", "https://api.open.fec.gov/developers/"],
+  [
+    "Money",
+    "FEC filings for U.S. Senate. Local spending reports aren’t added yet",
+    "https://api.open.fec.gov/developers/",
+  ],
+  [
+    "Candidate positions",
+    "Only from candidates, through the portal. Never guessed",
+  ],
 ];
 
 export default function About() {
@@ -184,6 +192,11 @@ export default function About() {
               <li>
                 <strong>Money-blind</strong>
                 The math only sees positions, and a test proves it
+              </li>
+              <li>
+                <strong>No guessing</strong>
+                Real candidates are matched only after they answer. Until then
+                we list them
               </li>
             </ul>
           </section>
