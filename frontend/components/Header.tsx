@@ -3,7 +3,7 @@ import { LogoMark } from "./Brand";
 export default function Header({
   active,
 }: {
-  active: "voter" | "candidate" | "about";
+  active: "voter" | "candidate" | "about" | "features";
 }) {
   return (
     <>
@@ -23,6 +23,13 @@ export default function Header({
           </a>
           <a href="/about" className={active === "about" ? "on" : ""}>
             How it works
+          </a>
+          <a
+            href="/additional-features"
+            className={active === "features" ? "on" : ""}
+            aria-current={active === "features" ? "page" : undefined}
+          >
+            Additional features
           </a>
         </nav>
       </header>

@@ -1,0 +1,148 @@
+#bb-engine {
+  color-scheme: light;
+  --be-bg: var(--sky);
+  --be-panel: var(--paper);
+  --be-ink: var(--navy);
+  --be-muted: var(--muted);
+  --be-line: var(--line);
+  --be-lime: var(--red);
+  --be-violet: var(--navy);
+  --be-cyan: #b27b0e;
+  --be-soft: var(--red-soft);
+  --be-button: var(--red);
+  --be-button-ink: var(--paper);
+  --be-gold: var(--gold);
+  --be-gold-soft: var(--gold-soft);
+  --be-display: var(--display);
+  --be-body: var(--body);
+  background: var(--be-bg);
+  color: var(--be-ink);
+  font: 17px/1.5 var(--be-body);
+  isolation: isolate;
+}
+#bb-engine * { box-sizing: border-box; }
+#bb-engine button, #bb-engine input { font: inherit; }
+#bb-engine button { color: inherit; }
+#bb-engine button:focus-visible, #bb-engine input:focus-visible, #bb-engine summary:focus-visible { outline: 3px solid var(--be-gold); outline-offset: 3px; }
+#bb-engine .be-main { width: 100%; max-width: 1080px; margin: 0 auto; padding: 12px 24px 0; }
+#bb-engine .be-hero { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px 32px; margin: 0 0 26px; background: var(--be-panel); border: 3px solid var(--be-ink); border-radius: 28px; box-shadow: 6px 6px 0 var(--be-ink); overflow: hidden; }
+#bb-engine .be-hero::before { content: ""; position: absolute; right: -35px; bottom: -70px; width: 280px; height: 280px; border-radius: 50%; background: repeating-linear-gradient(-45deg,var(--be-soft) 0 16px,#fff 16px 32px); }
+#bb-engine .be-hero-copy { position: relative; max-width: 590px; }
+#bb-engine .be-overline { display: inline-flex; gap: 7px; align-items: center; background: var(--be-gold-soft); border: 2px solid var(--be-gold); border-radius: 999px; padding: 4px 12px; margin-bottom: 13px; font-size: 13px; font-weight: 700; }
+#bb-engine h1 { font: 700 clamp(34px,5.2vw,56px)/1.05 var(--be-display); letter-spacing: -.01em; margin: 0 0 14px; }
+#bb-engine h1 em { font-style: normal; color: var(--be-lime); }
+#bb-engine .be-intro { color: var(--be-muted); font-size: 17px; line-height: 1.5; max-width: 445px; }
+#bb-engine .be-demo { display: block; margin-top: 13px; border-left: 4px solid var(--be-line); padding-left: 10px; color: var(--be-muted); font-size: 13px; }
+#bb-engine .be-mascot { position: relative; width: 170px; height: 170px; flex: 0 0 170px; }
+#bb-engine .be-steps { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; margin: 0 0 20px; }
+#bb-engine .be-steps button { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; min-height: 83px; padding: 12px; border: 2px solid var(--be-line); border-radius: 17px; background: var(--be-panel); color: var(--be-ink); font: 600 16px/1.2 var(--be-display); text-align: left; }
+#bb-engine .be-steps button>span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--be-ink); color: #fff; font: 600 14px var(--be-display); }
+#bb-engine .be-steps button[aria-pressed=true] { border-color: var(--be-ink); background: var(--be-panel); box-shadow: 3px 3px 0 var(--be-ink); }
+#bb-engine .be-steps button[aria-pressed=true]>span { background: var(--be-lime); }
+#bb-engine .be-steps button:hover { border-color: var(--be-ink); }
+#bb-engine .be-chamber { border: 3px solid var(--be-ink); background: var(--be-panel); border-radius: 24px; box-shadow: 6px 6px 0 var(--be-ink); overflow: hidden; }
+#bb-engine .be-chamber-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 24px 26px 0; }
+#bb-engine .be-code { font: 700 12px/1.5 var(--be-body); letter-spacing: .2px; color: var(--be-muted); }
+#bb-engine #be-stage-kicker { display: inline-flex; padding: 3px 10px; background: var(--be-ink); color: #fff; border-radius: 999px; font-size: 11px; }
+#bb-engine h2 { font: 600 26px/1.15 var(--be-display); letter-spacing: -.01em; margin: 11px 0 0; }
+#bb-engine .be-process-label { background: var(--be-gold-soft); border: 2px solid var(--be-gold); border-radius: 12px; padding: 7px 11px; text-align: right; font-size: 11px; flex-shrink: 0; }
+#bb-engine .be-process-label>span { display: block; color: var(--be-ink); font-size: 12px; }
+#bb-engine .be-view { position: relative; height: 350px; margin: 15px 24px 0; background: var(--be-bg); border-radius: 18px; }
+#bb-engine canvas { display: block; width: 100%; height: 100%; }
+#bb-engine .be-readout { position: absolute; bottom: 13px; left: 8px; right: 8px; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; pointer-events: none; }
+#bb-engine .be-readout strong { font: 600 30px/1.2 var(--be-display); color: var(--be-ink); }
+#bb-engine .be-readout>span:last-child { font-size: 12px; color: var(--be-muted); }
+#bb-engine .be-explanation { display: flex; gap: 14px; align-items: flex-start; margin: 20px 26px 0; padding: 15px; border-left: 5px solid var(--be-lime); border-radius: 0 14px 14px 0; background: var(--be-soft); }
+#bb-engine .be-step-number { font: 600 20px var(--be-display); color: var(--be-lime); }
+#bb-engine .be-explanation strong { font: 600 19px/1.3 var(--be-display); }
+#bb-engine .be-explanation p { font-size: 15px; line-height: 1.5; color: var(--be-muted); margin: 6px 0 0; max-width: 680px; }
+#bb-engine .be-controls { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 24px 26px 28px; }
+#bb-engine .be-controls button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 10px 20px; border: 2.5px solid var(--be-ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--be-ink); font-size: 16px; font-weight: 700; transition: transform .08s,box-shadow .08s,background .15s; }
+#bb-engine .be-controls button:active:not(:disabled) { transform: translate(3px,3px); box-shadow: 0 0 0 var(--be-ink); }
+#bb-engine .be-secondary { background: var(--be-panel); }
+#bb-engine .be-secondary:hover:not(:disabled) { background: var(--be-bg); }
+#bb-engine .be-secondary:disabled { opacity: .45; }
+#bb-engine .be-controls .be-primary { background: var(--be-button); color: var(--be-button-ink); }
+#bb-engine .be-primary:hover { background: var(--red-dark); }
+#bb-engine .be-primary>span { font-size: 22px; }
+#bb-engine .be-inspector { margin-top: 25px; padding: 22px 24px; border: 2.5px solid var(--be-ink); border-radius: 22px; background: var(--be-panel); }
+#bb-engine .be-inspector-title { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+#bb-engine .be-inspector-title>.be-code { font: 600 21px var(--be-display); text-transform: none; color: var(--be-ink); }
+#bb-engine .be-small { font-size: 14px; color: var(--be-muted); }
+#bb-engine .be-inspector-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px; }
+#bb-engine .be-priorities { min-width: 0; background: var(--be-bg); padding: 14px; border-radius: 16px; }
+#bb-engine label { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; }
+#bb-engine output { font: 600 18px var(--be-display); color: var(--be-ink); white-space: nowrap; }
+#bb-engine input[type=range] { width: 100%; accent-color: var(--be-ink); height: 28px; margin: 12px 0 0; }
+#bb-engine .be-range-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--be-muted); }
+#bb-engine .be-vector-label { display: flex; justify-content: space-between; gap: 10px; padding-top: 11px; margin-top: 15px; border-top: 2px solid var(--be-line); font-size: 12px; color: var(--be-muted); }
+#bb-engine code { font: 12px/1.6 ui-monospace,monospace; color: var(--be-ink); background: transparent; padding: 0; }
+#bb-engine .be-results { display: grid; align-content: center; gap: 0; }
+#bb-engine .be-result-row { display: grid; grid-template-columns: 87px 1fr 60px; gap: 11px; align-items: center; padding: 12px 0; border-bottom: 2px solid var(--be-line); font-size: 14px; }
+#bb-engine .be-result-row:first-child { border-top: 2px solid var(--be-line); }
+#bb-engine .be-result-row strong { text-align: right; font: 600 21px var(--be-display); }
+#bb-engine .be-bar { height: 9px; border-radius: 99px; background: var(--be-bg); overflow: hidden; }
+#bb-engine .be-fill { height: 100%; border-radius: 99px; transition: width .45s ease; background: var(--be-lime); }
+#bb-engine .be-result-row:nth-child(2) .be-fill { background: var(--be-violet); }
+#bb-engine .be-result-row:nth-child(3) .be-fill { background: var(--be-cyan); }
+#bb-engine .be-math { border-top: 2px solid var(--be-line); margin-top: 20px; font-size: 14px; }
+#bb-engine .be-math summary { padding: 16px 0 0; color: var(--be-ink); font-weight: 700; }
+#bb-engine .be-math summary>span { float: right; font: 12px ui-monospace,monospace; color: var(--be-muted); padding-top: 4px; }
+#bb-engine #be-math-body { margin-top: 13px; padding: 14px 16px; border-radius: 14px; background: var(--be-bg); line-height: 1.7; color: var(--be-muted); }
+#bb-engine #be-math-body p { margin: 8px 0; }
+#bb-engine #be-math-body code { overflow-wrap: anywhere; }
+#bb-engine .be-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: var(--be-muted); font-size: 13px; padding: 23px 0 27px; }
+#bb-engine .be-slash { margin: 0 7px; opacity: .55; }
+#bb-engine .be-sr { position: absolute; clip: rect(0,0,0,0); width: 1px; height: 1px; overflow: hidden; }
+@media(max-width:900px) {
+  #bb-engine .be-mascot { width: 135px; height: 135px; flex-basis: 135px; }
+  #bb-engine .be-inspector-grid { grid-template-columns: 1fr; gap: 18px; }
+}
+@media(max-width:620px) {
+  #bb-engine .be-main { padding: 8px 14px 0; }
+  #bb-engine .be-hero { padding: 22px 20px; align-items: flex-start; gap: 10px; margin-bottom: 22px; }
+  #bb-engine .be-mascot { position: absolute; top: 19px; right: 12px; width: 68px; height: 68px; }
+  #bb-engine .be-overline { font-size: 12px; padding: 3px 9px; max-width: calc(100% - 60px); }
+  #bb-engine h1 { font-size: 39px; margin-top: 12px; }
+  #bb-engine .be-intro { font-size: 16px; }
+  #bb-engine .be-demo { font-size: 12px; }
+  #bb-engine .be-steps { gap: 5px; }
+  #bb-engine .be-steps button { padding: 8px 5px; gap: 7px; min-height: 76px; align-items: center; font-size: 12px; }
+  #bb-engine .be-steps button>span { width: 23px; height: 23px; font-size: 12px; }
+  #bb-engine .be-chamber-top { padding: 20px 17px 0; }
+  #bb-engine .be-process-label { display: none; }
+  #bb-engine h2 { font-size: 24px; }
+  #bb-engine .be-view { margin: 14px 12px 0; height: 330px; }
+  #bb-engine .be-readout strong { font-size: 27px; }
+  #bb-engine .be-readout>span:last-child { font-size: 11px; }
+  #bb-engine .be-explanation { margin: 16px 15px 0; padding: 12px; gap: 9px; }
+  #bb-engine .be-explanation strong { font-size: 18px; }
+  #bb-engine .be-explanation p { font-size: 14px; }
+  #bb-engine .be-controls { padding: 20px 15px 25px; gap: 10px; }
+  #bb-engine .be-controls button { padding: 9px 12px; font-size: 14px; gap: 7px; }
+  #bb-engine #be-step-count { display: none; }
+  #bb-engine .be-inspector { padding: 18px 16px; }
+  #bb-engine .be-inspector-title { flex-direction: column; align-items: flex-start; gap: 4px; }
+  #bb-engine .be-math summary>span { display: none; }
+  #bb-engine .be-result-row { grid-template-columns: 82px 1fr 57px; gap: 8px; }
+  #bb-engine .be-footer { flex-direction: column; gap: 4px; font-size: 12px; }
+}
+@media(max-width:370px) {
+  #bb-engine .be-hero { padding-left: 16px; padding-right: 16px; }
+  #bb-engine h1 { font-size: 35px; }
+  #bb-engine .be-steps button { font-size: 11px; padding: 7px 2px; }
+  #bb-engine .be-step-number { display: none; }
+  #bb-engine .be-controls button { padding: 8px 10px; font-size: 13px; }
+  #bb-engine .be-result-row { font-size: 13px; grid-template-columns: 76px 1fr 53px; }
+  #bb-engine .be-result-row strong { font-size: 19px; }
+  #bb-engine label { font-size: 14px; }
+}
+@media(prefers-reduced-motion:reduce) { #bb-engine * { transition: none!important; animation: none!important; } }
+@media(pointer:coarse) { #bb-engine button { min-height: 44px; } #bb-engine input[type=range] { height: 40px; } }
+#bb-engine button:not(:disabled), #bb-engine summary { cursor: pointer; }
+#bb-engine .be-mascot svg { width: 100%; height: 100%; }
+#bb-engine .be-controls svg { flex-shrink: 0; }
+#bb-engine .be-inspector-title h2 { margin: 0; }
+#bb-engine input[type=range] { min-height: 28px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+#bb-engine .be-footer a { font-weight: 700; text-underline-offset: 3px; }
+
