@@ -2,6 +2,12 @@
 
 **Vote on policies, not ad budgets. · HackOHI/O 2026**
 
+<p align="center">
+  <a href="https://blindballot-app.vercel.app"><img src="docs/screenshot.jpg" alt="Blind Ballot home page" width="800"></a>
+</p>
+
+**[Try it live →](https://blindballot-app.vercel.app)**
+
 Blind Ballot is a nonpartisan voter guide that helps Ohio voters compare candidates based on policy positions before seeing their names, parties, endorsements, or campaign spending.
 
 The website is designed to reduce the influence of name recognition and political advertising. Instead of asking voters to begin with a candidate, Blind Ballot begins with the issues that matter to them.
